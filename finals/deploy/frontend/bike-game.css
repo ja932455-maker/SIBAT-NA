@@ -1,0 +1,471 @@
+/* ==========================================================================
+   SIBAT NA — frontend/bike-game.css
+   Neon 2D big-bike lane on the login visual + the SIBAT RUN offline game.
+   Builds on the tokens in app.css. Flat, side-on 2D art only.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. LOGIN HERO — NEON LANE
+   -------------------------------------------------------------------------- */
+.neon-lane {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.neon-lane-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.neon-lane-tag {
+  font-family: var(--mono); font-size: 0.58rem; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(24, 58, 49, 0.58);
+}
+.neon-lane-live {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 0.56rem; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: #0a7585;
+}
+.neon-lane-live i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #00d9ff;
+  box-shadow: 0 0 0 4px rgba(0, 217, 255, 0.15), 0 0 12px #00d9ff;
+  animation: lanePulse 1.5s ease-in-out infinite;
+}
+.neon-lane-track {
+  position: relative;
+  height: clamp(100px, 13vh, 132px);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 217, 255, 0.36);
+  background:
+    radial-gradient(120% 160% at 18% 100%, rgba(8, 123, 255, 0.42), transparent 58%),
+    radial-gradient(90% 120% at 92% 110%, rgba(212, 147, 78, 0.28), transparent 55%),
+    linear-gradient(180deg, #040814, #071126 55%, #03060f);
+  box-shadow:
+    inset 0 0 42px rgba(0, 217, 255, 0.12),
+    0 18px 32px rgba(24, 58, 49, 0.16);
+  isolation: isolate;
+}
+.neon-lane-track::before {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(rgba(0, 217, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 217, 255, 0.07) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 72%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 72%);
+  opacity: 0.7;
+}
+.neon-lane-glow {
+  position: absolute; left: 8%; right: 8%; bottom: -46px; height: 90px;
+  background: radial-gradient(ellipse at center, rgba(0, 217, 255, 0.55), transparent 68%);
+  filter: blur(6px);
+}
+.neon-lane-line {
+  position: absolute; left: -10%; right: -10%; bottom: 20%; height: 2px;
+  background: repeating-linear-gradient(90deg, #00d9ff 0 26px, transparent 26px 56px);
+  filter: drop-shadow(0 0 6px rgba(0, 217, 255, 0.85));
+  animation: laneRoad 0.5s linear infinite;
+}
+.neon-lane-track::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: 0; height: 20%;
+  background: linear-gradient(180deg, rgba(0, 217, 255, 0.12), rgba(3, 6, 15, 0.9));
+  box-shadow: inset 0 1px 0 rgba(0, 217, 255, 0.28);
+}
+.neon-lane-streak {
+  position: absolute; right: -34%; width: 34%; height: 2px;
+  border-radius: 999px; opacity: 0;
+  background: linear-gradient(90deg, transparent, #00d9ff);
+  filter: drop-shadow(0 0 5px rgba(0, 217, 255, 0.8));
+  animation: laneStreak 1s linear infinite;
+  z-index: 2;
+}
+.neon-lane-streak-b {
+  top: 57%; width: 24%;
+  background: linear-gradient(90deg, transparent, #f2feff);
+  animation-duration: 0.72s; animation-delay: 0.28s;
+}
+.neon-lane-streak-c {
+  top: 66%; width: 18%;
+  background: linear-gradient(90deg, transparent, #ffd93d);
+  animation-duration: 1.15s; animation-delay: 0.55s;
+}
+.neon-lane-streak-a { top: 46%; animation-delay: 0.08s; }
+.neon-lane-bike {
+  position: absolute; left: 11%; bottom: 15%;
+  height: 78%; aspect-ratio: 20 / 11;
+  z-index: 3;
+  animation: laneBikeBob 0.42s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 12px rgba(0, 217, 255, 0.55));
+}
+.neon-lane-bike::before,
+.neon-lane-bike::after {
+  content: ""; position: absolute; height: 2px; border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.9));
+  filter: drop-shadow(0 0 5px rgba(0, 217, 255, 0.8));
+  animation: laneTrail 0.36s ease-in-out infinite alternate;
+}
+.neon-lane-bike::before { right: 76%; top: 42%; width: 52%; }
+.neon-lane-bike::after {
+  right: 84%; top: 64%; width: 32%;
+  background: linear-gradient(90deg, transparent, rgba(255, 217, 61, 0.9));
+  filter: drop-shadow(0 0 5px rgba(255, 217, 61, 0.6));
+  animation-delay: 0.12s;
+}
+.neon-lane-bike .bike-svg { width: 100%; height: 100%; display: block; }
+.neon-lane-shadow {
+  position: absolute; left: 6%; right: 6%; bottom: -1px; height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 217, 255, 0.45), transparent 70%);
+  filter: blur(3px);
+}
+.neon-lane-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 24px;
+}
+.neon-lane-foot p {
+  font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(24, 58, 49, 0.55); white-space: nowrap; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.neon-lane-foot p span { color: var(--orange); margin: 0 4px; }
+.neon-lane-play {
+  display: inline-flex; align-items: center; gap: 3px; flex: none;
+  padding: 5px 9px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(24, 58, 49, 0.16);
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--green);
+  font-family: var(--mono); font-size: 0.58rem; font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.neon-lane-play span:first-child { margin-right: 3px; }
+.neon-lane-play kbd {
+  padding: 1px 4px; font-size: 0.55rem; border-radius: 4px;
+  border: 1px solid rgba(24, 58, 49, 0.18); background: rgba(24, 58, 49, 0.06);
+  color: var(--green); box-shadow: none;
+}
+.neon-lane-play:hover {
+  border-color: rgba(0, 217, 255, 0.6);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.12), 0 6px 18px rgba(24, 58, 49, 0.12);
+}
+
+/* hover = the bike opens the throttle */
+.neon-lane:hover .neon-lane-line { animation-duration: 0.26s; }
+.neon-lane:hover .neon-lane-streak-a { animation-duration: 0.55s; }
+.neon-lane:hover .neon-lane-streak-b { animation-duration: 0.42s; }
+.neon-lane:hover .neon-lane-bike { animation-duration: 0.24s; }
+
+@keyframes laneRoad {
+  to { background-position: -56px 0; }
+}
+@keyframes laneStreak {
+  0% { transform: translateX(0); opacity: 0; }
+  14% { opacity: 0.9; }
+  100% { transform: translateX(-430%); opacity: 0; }
+}
+@keyframes laneBikeBob {
+  from { transform: translateY(-2px) rotate(-1deg); }
+  to { transform: translateY(1px); }
+}
+@keyframes laneTrail {
+  0% { transform: translateX(8px) scaleX(0.6); opacity: 0.25; }
+  100% { transform: translateX(-10px) scaleX(1.1); opacity: 0.95; }
+}
+@keyframes lanePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.82); }
+}
+
+/* Compact version shown inside the login panel on phones/tablets. */
+.mobile-hero { display: none; width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
+.mobile-hero .neon-lane { margin-top: 0; gap: 6px; }
+.mobile-hero .neon-lane-track { height: 80px; border-radius: 13px; }
+.mobile-hero .neon-lane-tag { color: var(--muted-2); }
+.mobile-hero .neon-lane-live { color: var(--cyan); }
+.mobile-hero .neon-lane-foot { gap: 8px; }
+.mobile-hero .neon-lane-foot p { color: var(--muted-2); }
+.mobile-hero .neon-lane-play {
+  padding: 6px 10px;
+  background: rgba(0, 217, 255, 0.08);
+  border-color: rgba(0, 217, 255, 0.32);
+  color: var(--cyan);
+}
+.mobile-hero .neon-lane-play:hover {
+  background: rgba(0, 217, 255, 0.15);
+  border-color: rgba(0, 217, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1), 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   2. SIBAT RUN OVERLAY
+   -------------------------------------------------------------------------- */
+body.run-open { overflow: hidden; }
+.sibat-run {
+  position: fixed; inset: 0; z-index: 130;
+  display: grid; place-items: center;
+  padding: clamp(10px, 3vw, 34px);
+  background:
+    radial-gradient(900px 500px at 50% 110%, rgba(8, 123, 255, 0.22), transparent 65%),
+    rgba(2, 5, 13, 0.93);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.sibat-run-frame {
+  width: min(1180px, 100%);
+  max-height: calc(100vh - 2 * clamp(10px, 3vw, 34px));
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  background: linear-gradient(180deg, #0a0f20, #060a16);
+  box-shadow:
+    0 0 0 1px rgba(0, 217, 255, 0.08),
+    0 34px 90px rgba(0, 0, 0, 0.72),
+    0 0 90px rgba(0, 217, 255, 0.13);
+}
+.sibat-run-frame.is-hit { animation: runHit 0.34s ease; }
+
+.sibat-run-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 15, 32, 0.9);
+  flex: none;
+}
+.sibat-run-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.sibat-run-brand img {
+  width: 42px; height: 42px; border-radius: 12px; flex: none;
+  border: 1px solid rgba(0, 217, 255, 0.34);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.26);
+}
+.sibat-run-brand > div { display: flex; flex-direction: column; line-height: 1.12; min-width: 0; }
+.sibat-run-brand strong {
+  font-size: 0.92rem; font-weight: 700; letter-spacing: 0.16em;
+  color: var(--text); white-space: nowrap;
+}
+.sibat-run-brand span {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted-2); white-space: nowrap;
+}
+.sibat-run-score { display: flex; align-items: center; gap: 22px; margin-left: auto; }
+.sibat-run-score div { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.sibat-run-score span {
+  font-family: var(--mono); font-size: 0.52rem; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-2);
+}
+.sibat-run-score strong {
+  font-family: var(--mono); font-size: 1.02rem; letter-spacing: 0.08em;
+  color: var(--cyan); text-shadow: 0 0 14px rgba(0, 217, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.sibat-run-score div:last-child strong { color: var(--gold); text-shadow: 0 0 14px rgba(255, 217, 61, 0.4); }
+.sibat-run-close {
+  width: 38px; height: 38px; flex: none; display: grid; place-items: center;
+  border-radius: 11px; cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: rgba(174, 184, 215, 0.06);
+  color: var(--muted);
+  font-size: 0.9rem;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.sibat-run-close:hover { color: var(--text); border-color: rgba(0, 217, 255, 0.5); background: rgba(0, 217, 255, 0.1); }
+
+.sibat-run-stage {
+  position: relative;
+  height: clamp(310px, 50vh, 470px);
+  overflow: hidden;
+  flex: none;
+  background:
+    radial-gradient(70% 90% at 50% 105%, rgba(8, 123, 255, 0.3), transparent 62%),
+    radial-gradient(38% 55% at 76% 72%, rgba(212, 147, 78, 0.14), transparent 70%),
+    linear-gradient(180deg, #040814, #0a1428 62%, #050a16);
+}
+.run-skyline {
+  position: absolute; left: 0; right: 0; bottom: 22%; width: 100%; height: 42%;
+  color: #00d9ff; opacity: 0.15;
+  filter: drop-shadow(0 0 18px rgba(0, 217, 255, 0.22));
+  pointer-events: none;
+}
+.run-grid {
+  position: absolute; inset: 0 0 22% 0;
+  background:
+    linear-gradient(rgba(0, 217, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 217, 255, 0.06) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: linear-gradient(180deg, transparent, #000 55%);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 55%);
+  animation: runGrid 2.4s linear infinite;
+}
+.sibat-run-stage.is-running .run-grid { animation-duration: 0.8s; }
+
+.run-road {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
+  background: linear-gradient(180deg, #0b1224, #04070e);
+  border-top: 2px solid rgba(0, 217, 255, 0.75);
+  box-shadow: 0 -20px 54px rgba(0, 217, 255, 0.16), inset 0 26px 40px rgba(0, 217, 255, 0.05);
+  z-index: 1;
+}
+.run-road span {
+  position: absolute; left: -8%; right: -8%; top: 42%; height: 3px;
+  background: repeating-linear-gradient(90deg, rgba(255, 217, 61, 0.9) 0 30px, transparent 30px 68px);
+  filter: drop-shadow(0 0 7px rgba(255, 217, 61, 0.45));
+  animation: runRoad 0.62s linear infinite;
+}
+.sibat-run-stage.is-running .run-road span { animation-duration: 0.36s; }
+
+.run-obstacles { position: absolute; inset: 0 0 22% 0; z-index: 2; pointer-events: none; }
+.run-obstacle { position: absolute; left: 0; bottom: 0; will-change: transform; }
+.run-obstacle.is-cone {
+  width: 38px; height: 58px;
+  clip-path: polygon(50% 0, 90% 100%, 10% 100%);
+  background: repeating-linear-gradient(180deg, #ffd93d 0 9px, #ff8a3d 9px 14px, #f7f6ef 14px 19px, #ff8a3d 19px 24px);
+  filter: drop-shadow(0 0 10px rgba(255, 180, 61, 0.75));
+}
+.run-obstacle.is-cone::after {
+  content: ""; position: absolute; left: -5px; right: -5px; bottom: -2px; height: 7px;
+  border-radius: 3px; background: #ffd93d;
+  box-shadow: 0 0 14px rgba(255, 217, 61, 0.85);
+}
+.run-obstacle.is-barrier {
+  width: 66px; height: 70px;
+  border: 2px solid #ff315f; border-radius: 5px;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 49, 95, 0.3) 0 12px, rgba(4, 8, 18, 0.1) 12px 24px),
+    rgba(12, 8, 18, 0.88);
+  box-shadow: 0 0 16px rgba(255, 49, 95, 0.55), inset 0 0 18px rgba(255, 49, 95, 0.2);
+}
+.run-obstacle.is-barrier::before {
+  content: ""; position: absolute; left: 12px; right: 12px; top: 7px; height: 4px;
+  border-radius: 999px; background: #ff315f; box-shadow: 0 0 12px #ff315f;
+}
+
+.run-bike {
+  position: absolute; left: 13%; bottom: 17%;
+  width: clamp(126px, 16vw, 206px);
+  z-index: 4;
+  transform-origin: 50% 92%;
+  will-change: transform;
+}
+.run-bike .bike-svg {
+  width: 100%; height: auto; display: block;
+  filter: drop-shadow(0 0 11px rgba(0, 217, 255, 0.6));
+  animation: runBikeIdle 1.1s ease-in-out infinite alternate;
+}
+.sibat-run-stage.is-running .run-bike .bike-svg { animation: none; }
+.run-bike-shadow {
+  position: absolute; left: 8%; right: 8%; bottom: 0; height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 217, 255, 0.5), transparent 72%);
+  filter: blur(4px);
+}
+
+.run-panel {
+  position: absolute; left: 50%; top: 46%; z-index: 6;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100% - 40px));
+  padding: 24px 26px;
+  text-align: center;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 217, 255, 0.26);
+  background: rgba(5, 10, 22, 0.82);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.6), inset 0 0 40px rgba(0, 217, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.run-panel-over { border-color: rgba(255, 49, 95, 0.38); box-shadow: 0 26px 60px rgba(0, 0, 0, 0.6), inset 0 0 40px rgba(255, 49, 95, 0.07); }
+.run-kicker {
+  font-family: var(--mono); font-size: 0.56rem; font-weight: 700;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan);
+  margin-bottom: 9px;
+}
+.run-panel-over .run-kicker { color: var(--red); }
+.run-panel h2 { font-size: clamp(1.25rem, 2.4vw, 1.7rem); letter-spacing: -0.02em; color: var(--text); }
+.run-panel p {
+  max-width: 34ch; margin: 8px auto 16px;
+  font-size: 0.84rem; line-height: 1.55; color: var(--muted);
+}
+.run-panel p strong { color: var(--gold); font-family: var(--mono); }
+.run-panel kbd { font-size: 0.68rem; }
+.run-panel .btn { padding: 11px 22px; font-size: 0.86rem; }
+
+.run-hint {
+  position: absolute; left: 18px; bottom: 16px; z-index: 5;
+  display: flex; align-items: center; gap: 14px;
+  font-size: 0.66rem; color: var(--muted-2);
+  pointer-events: none;
+}
+.run-hint span { display: inline-flex; align-items: center; gap: 4px; }
+.run-hint kbd { font-size: 0.6rem; }
+
+.sibat-run-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 11px 18px;
+  border-top: 1px solid var(--line);
+  background: rgba(4, 8, 18, 0.8);
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.08em;
+  color: var(--muted-2);
+  flex: none;
+}
+.sibat-run-foot span { display: inline-flex; align-items: center; gap: 6px; }
+.sibat-run-foot i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #4ade80; box-shadow: 0 0 10px rgba(74, 222, 128, 0.8);
+}
+.sibat-run-foot kbd { font-size: 0.56rem; }
+
+@keyframes runGrid {
+  to { background-position: -54px 0; }
+}
+@keyframes runRoad {
+  to { background-position: -68px 0; }
+}
+@keyframes runBikeIdle {
+  from { transform: translateY(-2px) rotate(-1deg); }
+  to { transform: translateY(1px); }
+}
+@keyframes runHit {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+/* --------------------------------------------------------------------------
+   3. RESPONSIVE
+   -------------------------------------------------------------------------- */
+@media (max-width: 1080px) {
+  .mobile-hero { display: block; margin: 12px auto 0; }
+}
+@media (max-width: 720px) {
+  .mobile-hero { margin-top: 10px; }
+  .mobile-hero .neon-lane-track { height: 74px; }
+  .mobile-hero .neon-lane-bike { left: 10%; height: 80%; }
+  .mobile-hero .neon-lane-play { font-size: 0.56rem; padding: 6px 9px; }
+  .sibat-run { padding: 0; }
+  .sibat-run-frame { border-radius: 0; max-height: 100vh; height: 100vh; width: 100%; }
+  .sibat-run-head { padding: 10px 12px; gap: 10px; }
+  .sibat-run-brand img { width: 34px; height: 34px; border-radius: 9px; }
+  .sibat-run-brand span { display: none; }
+  .sibat-run-score { gap: 12px; }
+  .sibat-run-score strong { font-size: 0.9rem; }
+  .sibat-run-stage { height: auto; flex: 1; }
+  .run-bike { width: clamp(108px, 34vw, 150px); left: 10%; }
+  .run-panel { padding: 20px 18px; }
+  .sibat-run-foot span:last-child { display: none; }
+  .run-hint { display: none; }
+}
+
+/* Small/short phones: a slimmer lane keeps the primary CTA above the fold. */
+@media (max-width: 420px) and (max-height: 700px) {
+  .mobile-hero { margin-top: 8px; }
+  .mobile-hero .neon-lane-head { display: none; }
+  .mobile-hero .neon-lane-track { height: 58px; }
+  .mobile-hero .neon-lane-bike { height: 82%; }
+}

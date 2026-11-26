@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sibat Na — Admin Console</title>
+<link rel="icon" type="image/png" href="../brand/sibat-na-logo-256.png" />
+<!-- ==========================================================================
+     SIBAT NA — assets/compiled/frontend-all.html
+     Single-file admin dashboard (no build step, no dependencies).
+     Blue admin theme: #087bff / #00d9ff / #070d1b.
+     Talks to the C++ engine on http://127.0.0.1:8787.
+     Full CRUD: drivers, passengers, rides, routes, locations, UI text,
+     fare settings and a demo.reset.
+     ========================================================================== -->
+<style>
+:root {
+  --bg: #070d1b;
+  --surface: #0c1428;
+  --surface-2: #111d36;
+  --surface-3: #162444;
+  --line: rgba(158, 181, 226, 0.14);
+  --line-strong: rgba(158, 181, 226, 0.3);
+  --text: #eef4ff;
+  --muted: #9db1d8;
+  --muted-2: #6b7fa8;
+  --blue: #087bff;
+  --cyan: #00d9ff;
+  --red: #ff315f;
+  --gold: #ffd93d;
+  --green: #2ee6a8;
+  --radius: 14px;
+  --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; font-family: var(--font); color: var(--text);
+  background:
+    radial-gradient(900px 500px at 100% 0%, rgba(8, 123, 255, 0.14), transparent 60%),
+    radial-gradient(700px 420px at 0% 100%, rgba(0, 217, 255, 0.07), transparent 60%),
+    var(--bg);
+  overflow: hidden;
+}
+h1, h2, h3, p { margin: 0; }
+button { font: inherit; color: inherit; }
+a { color: var(--cyan); text-decoration: none; }
+code, .mono { font-family: var(--mono); font-size: 0.82em; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(158, 181, 226, 0.22); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+
+/* layout */
+.app { display: grid; grid-template-columns: 248px minmax(0, 1fr); height: 100vh; }
+.sidebar {
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 20px 14px; border-right: 1px solid var(--line);
+  background: rgba(9, 16, 32, 0.86);
+  backdrop-filter: blur(12px);
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 12px; border-bottom: 1px solid var(--line); }
+.brand img { width: 38px; height: 38px; border-radius: 11px; flex: none; box-shadow: 0 0 18px rgba(0, 217, 255, 0.28); }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand-text strong { font-size: 1rem; letter-spacing: -0.02em; }
+.brand-text span { font-size: 0.62rem; letter-spacing: 0.16em; color: var(--cyan); text-transform: uppercase; }
+.nav { display: flex; flex-direction: column; gap: 3px; }
+.nav-label { font-size: 0.58rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-2); padding: 10px 10px 5px; }
+.nav button {
+  display: flex; align-items: center; gap: 10px;
+  border: none; background: none; cursor: pointer;
+  padding: 9px 11px; border-radius: 9px;
+  font-size: 0.82rem; color: var(--muted); text-align: left;
+  transition: background 0.18s, color 0.18s;
+}
+.nav button:hover { background: rgba(8, 123, 255, 0.08); color: var(--text); }
+.nav button.is-active { background: linear-gradient(90deg, rgba(8, 123, 255, 0.2), rgba(0, 217, 255, 0.05)); color: var(--cyan); box-shadow: inset 2px 0 0 var(--cyan); }
+.nav .ico { width: 18px; text-align: center; opacity: 0.9; }
+.sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px 8px 0; border-top: 1px solid var(--line); }
+.sidebar-foot a { font-size: 0.74rem; color: var(--muted); }
+.sidebar-foot a:hover { color: var(--cyan); }
+.sidebar-foot .note { font-size: 0.62rem; color: var(--muted-2); line-height: 1.5; }
+
+.main { min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 24px; border-bottom: 1px solid var(--line);
+  background: rgba(9, 16, 32, 0.7); backdrop-filter: blur(12px);
+}
+.topbar h1 { font-size: 1.2rem; letter-spacing: -0.02em; }
+.topbar .sub { font-size: 0.72rem; color: var(--muted-2); margin-top: 2px; }
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.engine {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 10px; border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2);
+}
+.engine i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-2); }
+.engine.is-online { color: var(--green); border-color: rgba(46, 230, 168, 0.4); }
+.engine.is-online i { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.engine.is-offline { color: #ff8aa3; border-color: rgba(255, 49, 95, 0.4); }
+.engine.is-offline i { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: 9px; border: 1px solid transparent;
+  padding: 9px 14px; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; transition: all 0.18s; white-space: nowrap;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: linear-gradient(135deg, var(--blue), var(--cyan)); color: #04101f; box-shadow: 0 8px 20px rgba(8, 123, 255, 0.25); }
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-ghost { background: rgba(238, 244, 255, 0.04); border-color: var(--line-strong); color: var(--text); }
+.btn-ghost:hover { border-color: var(--cyan); }
+.btn-danger { background: rgba(255, 49, 95, 0.1); border-color: rgba(255, 49, 95, 0.4); color: #ff8aa3; }
+.btn-danger:hover { background: rgba(255, 49, 95, 0.18); }
+.btn-sm { padding: 6px 10px; font-size: 0.7rem; }
+.link { background: none; border: none; color: var(--cyan); font-size: 0.72rem; cursor: pointer; padding: 2px 4px; }
+.link.danger { color: #ff8aa3; }
+.link:hover { text-decoration: underline; }
+
+.content { flex: 1; overflow-y: auto; padding: 22px 24px 50px; }
+.banner {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; margin-bottom: 16px;
+  border: 1px solid rgba(255, 49, 95, 0.35);
+  background: rgba(255, 49, 95, 0.08);
+  border-radius: 10px; font-size: 0.78rem; color: #ffd0da;
+}
+.banner .btn { margin-left: auto; }
+.banner code { color: #ffd0da; }
+
+/* cards + stats */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.stat {
+  background: linear-gradient(160deg, rgba(17, 29, 54, 0.95), rgba(12, 20, 40, 0.95));
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px;
+}
+.stat small { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-2); }
+.stat strong { display: block; font-family: var(--mono); font-size: 1.5rem; margin-top: 6px; }
+.stat span { font-size: 0.66rem; color: var(--muted-2); }
+.cyan { color: var(--cyan); } .gold { color: var(--gold); } .red { color: var(--red); } .green { color: var(--green); }
+
+.grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items: start; }
+.panel {
+  background: rgba(12, 20, 40, 0.68);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px; min-width: 0;
+}
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.panel-head h2 { font-size: 0.92rem; font-weight: 600; }
+.panel-head .hint { font-size: 0.66rem; color: var(--muted-2); }
+.panel + .panel { margin-top: 16px; }
+
+/* toolbar */
+.toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.toolbar .spacer { flex: 1; }
+.search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 9px; padding: 0 10px;
+}
+.search span { color: var(--muted-2); font-size: 0.8rem; }
+.search input { background: none; border: none; color: var(--text); padding: 9px 0; font: inherit; font-size: 0.8rem; outline: none; width: 200px; }
+.search input::placeholder { color: var(--muted-2); }
+
+/* tables */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+thead th {
+  text-align: left; font-size: 0.56rem; letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--muted-2); font-weight: 600;
+  padding: 0 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+tbody td { padding: 9px 10px; border-bottom: 1px solid rgba(158, 181, 226, 0.07); vertical-align: middle; }
+tbody tr:hover td { background: rgba(0, 217, 255, 0.03); }
+tbody tr:last-child td { border-bottom: none; }
+td .sub { color: var(--muted-2); font-size: 0.66rem; }
+td .cell-main { display: flex; flex-direction: column; gap: 1px; }
+td .cell-main strong { font-weight: 500; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; background: var(--muted-2); }
+.dot.online { background: var(--green); box-shadow: 0 0 7px var(--green); }
+.dot.busy { background: var(--gold); box-shadow: 0 0 7px var(--gold); }
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(158, 181, 226, 0.08); border: 1px solid var(--line);
+  color: var(--muted); white-space: nowrap;
+}
+.pill.live { color: var(--cyan); border-color: rgba(0, 217, 255, 0.4); background: rgba(0, 217, 255, 0.08); }
+.pill.done { color: var(--green); border-color: rgba(46, 230, 168, 0.4); background: rgba(46, 230, 168, 0.07); }
+.pill.dead { color: #ff8aa3; border-color: rgba(255, 49, 95, 0.4); background: rgba(255, 49, 95, 0.07); }
+.row-actions { display: flex; gap: 4px; white-space: nowrap; }
+.empty { color: var(--muted-2); font-size: 0.78rem; padding: 16px 4px; text-align: center; }
+
+/* bars */
+.bars { display: flex; flex-direction: column; gap: 9px; }
+.bar-row { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 10px; font-size: 0.7rem; color: var(--muted); }
+.bar-row b { font-family: var(--mono); text-align: right; font-weight: 500; color: var(--text); }
+.bar { height: 8px; border-radius: 99px; background: rgba(158, 181, 226, 0.1); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+
+/* settings + text */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field.span-2 { grid-column: span 2; }
+.field label { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+.field input, .field select, .field textarea {
+  width: 100%; background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 8px; color: var(--text); padding: 9px 11px; font: inherit; font-size: 0.8rem;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: rgba(0, 217, 255, 0.6); box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+}
+.check-row { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: var(--muted); padding-top: 8px; }
+.check-row input { accent-color: var(--cyan); width: 15px; height: 15px; }
+.text-list { display: flex; flex-direction: column; gap: 9px; }
+.text-row { display: grid; grid-template-columns: 230px 1fr auto; gap: 10px; align-items: center; }
+.text-row label { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); word-break: break-all; }
+.text-row input { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; color: var(--text); padding: 8px 10px; font: inherit; font-size: 0.78rem; }
+.text-row input:focus { outline: none; border-color: var(--cyan); }
+.settings-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+/* connect */
+.connect {
+  max-width: 520px; margin: 40px auto; text-align: center;
+  background: linear-gradient(165deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 30px;
+}
+.connect .lock { font-size: 1.6rem; color: var(--cyan); margin-bottom: 8px; }
+.connect h2 { font-size: 1.2rem; margin-bottom: 6px; }
+.connect p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+.connect input { width: 100%; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 9px; color: var(--text); padding: 11px 13px; font: inherit; font-size: 0.82rem; margin-bottom: 10px; }
+.connect .row { display: flex; gap: 8px; }
+.connect .row .btn { flex: 1; }
+
+/* modal */
+.modal-backdrop { position: fixed; inset: 0; z-index: 80; display: none; place-items: center; padding: 20px; background: rgba(4, 8, 18, 0.76); backdrop-filter: blur(6px); }
+.modal-backdrop.is-open { display: grid; }
+.modal {
+  width: min(560px, 100%); max-height: 88vh; overflow-y: auto;
+  background: linear-gradient(165deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line-strong); border-radius: var(--radius);
+  padding: 22px; box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+}
+.modal h2 { font-size: 1.1rem; }
+.modal .modal-sub { font-size: 0.72rem; color: var(--muted-2); margin: 3px 0 14px; }
+.modal-x { float: right; border: none; background: none; color: var(--muted-2); font-size: 1.2rem; cursor: pointer; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+/* toast */
+.toast-host { position: fixed; right: 18px; bottom: 18px; z-index: 120; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  padding: 10px 14px; border-radius: 9px; font-size: 0.78rem;
+  background: rgba(12, 20, 40, 0.98); border: 1px solid var(--line-strong);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  opacity: 0; transform: translateY(6px); transition: all 0.22s;
+}
+.toast.in { opacity: 1; transform: none; }
+.toast.ok { border-color: rgba(46, 230, 168, 0.4); }
+.toast.err { border-color: rgba(255, 49, 95, 0.45); }
+
+@media (max-width: 980px) {
+  .app { grid-template-columns: 76px minmax(0, 1fr); }
+  .brand-text, .nav-label, .nav button span:not(.ico), .sidebar-foot { display: none; }
+  .nav button { justify-content: center; padding: 11px 0; }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .topbar { padding: 12px 14px; flex-wrap: wrap; }
+  .content { padding: 14px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .field.span-2 { grid-column: span 1; }
+  .text-row { grid-template-columns: 1fr; gap: 4px; }
+  .search input { width: 130px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="../brand/sibat-na-logo-256.png" alt="" width="38" height="38" />
+      <span class="brand-text"><strong>Sibat Na</strong><span>Admin console</span></span>
+    </div>
+
+    <nav class="nav" id="nav">
+      <span class="nav-label">Monitor</span>
+      <button type="button" class="is-active" data-view="overview"><span class="ico">◫</span><span>Overview</span></button>
+      <button type="button" data-view="queues"><span class="ico">≡</span><span>Live queue</span></button>
+      <span class="nav-label">Manage</span>
+      <button type="button" data-view="drivers"><span class="ico">◉</span><span>Drivers</span></button>
+      <button type="button" data-view="passengers"><span class="ico">☺</span><span>Passengers</span></button>
+      <button type="button" data-view="rides"><span class="ico">➜</span><span>Rides</span></button>
+      <button type="button" data-view="routes"><span class="ico">⌁</span><span>Routes</span></button>
+      <button type="button" data-view="locations"><span class="ico">⌖</span><span>Locations</span></button>
+      <span class="nav-label">System</span>
+      <button type="button" data-view="texts"><span class="ico">T</span><span>UI text</span></button>
+      <button type="button" data-view="settings"><span class="ico">⚙</span><span>Settings</span></button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <a href="../../index.html">← Passenger app</a>
+      <a href="../../index.html#driver">Driver mode ↗</a>
+      <p class="note" id="storageNote">Demo build. Data lives in <code>data/state.json</code> via the C++ engine.</p>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="viewTitle">Overview</h1>
+        <p class="sub" id="viewSub">Shared-ride operations, straight from the C++ core.</p>
+      </div>
+      <div class="topbar-actions">
+        <a class="btn btn-ghost btn-sm" href="../../index.html" id="backBtn" title="Back to the passenger app">← Back</a>
+        <span class="engine" id="engineBadge"><i></i><span>connecting</span></span>
+        <button type="button" class="btn btn-ghost btn-sm" id="refreshBtn">↻ Refresh</button>
+        <button type="button" class="btn btn-primary btn-sm" id="quickAdd">+ New</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="banner" id="banner" hidden>
+        <strong>Engine offline.</strong>
+        <span>Start <code>run.bat</code> in the project root, then refresh.</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="retryBtn">Retry</button>
+      </div>
+      <div id="view"></div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modalRoot"></div>
+<div class="toast-host" id="toastHost"></div>
+
+<script src="../../frontend/local-engine.js"></script>
+<script>
+/* ==========================================================================
+   ADMIN APP
+   - API base: same origin on :8787, otherwise localhost:8787
+   - Every mutation hits /api/admin/:entity
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  const KEY_BASE = 'sibatNaAdminBase';
+  const sameOrigin = location.port === '8787' ? '' : null;
+  const DEFAULT_BASE = sameOrigin !== null ? '' : 'http://127.0.0.1:8787';
+
+  const state = {
+    base: localStorage.getItem(KEY_BASE) || DEFAULT_BASE,
+    data: null,
+    view: 'overview',
+    online: false,
+    local: false,
+    search: {}
+  };
+
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+  const TITLES = {
+    overview: ['Overview', 'Shared-ride operations, straight from the C++ core.'],
+    queues: ['Live queue', 'FIFO position per corridor, with the oldest request first.'],
+    drivers: ['Drivers', 'Create, edit or remove driver accounts and demo credentials.'],
+    passengers: ['Passengers', 'Accounts created by the login flow.'],
+    rides: ['Rides', 'Every booking the engine has seen.'],
+    routes: ['Routes', 'Fare corridors and their base / per-km values.'],
+    locations: ['Locations', 'Saved pickup and destination landmarks.'],
+    texts: ['UI text', 'Editable labels applied across the passenger app.'],
+    settings: ['Settings', 'Fare formula, dispatch mode and demo reset.']
+  };
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function money(value) {
+    return '₱' + Number(value || 0).toFixed(2);
+  }
+
+  function toast(message, type) {
+    const host = $('#toastHost');
+    const el = document.createElement('div');
+    el.className = 'toast ' + (type === 'error' ? 'err' : 'ok');
+    el.textContent = message;
+    host.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('in'));
+    setTimeout(() => {
+      el.classList.remove('in');
+      setTimeout(() => el.remove(), 240);
+    }, 3000);
+  }
+
+  // ---------------------------------------------------------------------
+  //  API
+  // ---------------------------------------------------------------------
+  async function api(path, options) {
+    const opts = Object.assign({ method: 'GET', headers: {} }, options || {});
+    if (opts.body && typeof opts.body !== 'string') {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(opts.body);
+    }
+
+    // Local fallback = always-on demo engine (file:// or C++ server not running).
+    if (state.local) return localCall(path, opts);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6500);
+    let res;
+    try {
+      res = await fetch(state.base + '/api' + path, Object.assign({ signal: controller.signal, cache: 'no-store' }, opts));
+    } catch (err) {
+      if (window.SIBAT_LOCAL) {
+        state.local = true;
+        setOnline(true);
+        return localCall(path, opts);
+      }
+      setOnline(false);
+      throw new Error('Cannot reach the engine at ' + (state.base || location.origin));
+    } finally {
+      clearTimeout(timer);
+    }
+    let data = null;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (!res.ok || (data && data.ok === false)) {
+      throw new Error((data && data.error) || ('HTTP ' + res.status));
+    }
+    setOnline(true);
+    return data || {};
+  }
+
+  function localCall(path, opts) {
+    if (!window.SIBAT_LOCAL) throw new Error('Local demo engine is not loaded');
+    return window.SIBAT_LOCAL.handle(path, opts);
+  }
+
+  function setOnline(online) {
+    // The demo console is always shown as online: C++ when available,
+    // browser-local otherwise.
+    state.online = online || state.local;
+    const badge = $('#engineBadge');
+    badge.classList.add('is-online');
+    badge.classList.remove('is-offline');
+    badge.querySelector('span').textContent = 'engine live';
+    badge.title = state.local
+      ? 'Browser local engine — data is stored in localStorage'
+      : 'C++ engine connected on ' + (state.base || location.origin);
+    $('#banner').hidden = true;
+    const note = $('#storageNote');
+    if (note) {
+      note.innerHTML = state.local
+        ? 'Demo build · browser local engine. Data stays in this browser.'
+        : 'Demo build. Data lives in <code>data/state.json</code> via the C++ engine.';
+    }
+  }
+
+  async function refresh() {
+    try {
+      const res = await api('/state');
+      state.data = res.state;
+      setOnline(true);
+      $('#banner').hidden = true;
+      render();
+    } catch (err) {
+      if (!state.data && window.SIBAT_LOCAL) {
+        try {
+          state.local = true;
+          const res = localCall('/state', { method: 'GET' });
+          state.data = res.state;
+          setOnline(true);
+          render();
+          return;
+        } catch (_) { /* fall through */ }
+      }
+      setOnline(false);
+      if (!state.data) renderConnect(err.message);
+      else toast(err.message, 'error');
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  //  CONNECT SCREEN
+  // ---------------------------------------------------------------------
+  function renderConnect(error) {
+    $('#viewTitle').textContent = 'Connect';
+    $('#viewSub').textContent = 'Point the console at the C++ engine.';
+    $('#view').innerHTML =
+      '<div class="connect">' +
+        '<div class="lock">⚿</div>' +
+        '<h2>Connect to the Sibat Na engine</h2>' +
+        '<p>' + esc(error || 'The engine is not responding.') + '</p>' +
+        '<input id="baseInput" type="text" value="' + esc(state.base || 'http://127.0.0.1:8787') + '" placeholder="http://127.0.0.1:8787" />' +
+        '<div class="row">' +
+          '<button type="button" class="btn btn-primary" id="connectBtn">Connect</button>' +
+          '<button type="button" class="btn btn-ghost" id="startHintBtn">How to start</button>' +
+        '</div>' +
+        '<p style="margin-top:16px">Run <code>run.bat</code> from the project root, or <code>backend\\sibat-server.exe</code> directly.</p>' +
+      '</div>';
+    $('#connectBtn').addEventListener('click', () => {
+      state.base = $('#baseInput').value.trim().replace(/\/+$/, '');
+      localStorage.setItem(KEY_BASE, state.base);
+      refresh();
+    });
+    $('#startHintBtn').addEventListener('click', () => {
+      toast('Run run.bat, then press Retry.', 'ok');
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  RENDER ROUTER
+  // ---------------------------------------------------------------------
+  function render() {
+    const meta = TITLES[state.view] || TITLES.overview;
+    $('#viewTitle').textContent = meta[0];
+    $('#viewSub').textContent = state.local
+      ? 'Browser local engine · demo data is stored in localStorage'
+      : meta[1];
+    $$('#nav button').forEach(btn => btn.classList.toggle('is-active', btn.dataset.view === state.view));
+    const quickAdd = $('#quickAdd');
+    quickAdd.hidden = !['drivers', 'passengers', 'routes', 'locations'].includes(state.view);
+
+    if (!state.data) return;
+    switch (state.view) {
+      case 'overview': renderOverview(); break;
+      case 'queues': renderQueues(); break;
+      case 'drivers': renderAccounts('drivers'); break;
+      case 'passengers': renderAccounts('passengers'); break;
+      case 'rides': renderRides(); break;
+      case 'routes': renderRoutes(); break;
+      case 'locations': renderLocations(); break;
+      case 'texts': renderTexts(); break;
+      case 'settings': renderSettings(); break;
+    }
+  }
+
+  function getEntityList(entity) {
+    const data = state.data || {};
+    if (entity === 'drivers') return data.drivers || [];
+    if (entity === 'passengers') return data.passengers || [];
+    return [];
+  }
+
+  function filtered(entity, list) {
+    const query = (state.search[entity] || '').toLowerCase();
+    if (!query) return list;
+    return list.filter(item => JSON.stringify(item).toLowerCase().includes(query));
+  }
+
+  function statCard(label, value, sub, tone) {
+    return '<div class="stat"><small>' + esc(label) + '</small><strong class="' + (tone || '') + '">' +
+      esc(value) + '</strong>' + (sub ? '<span>' + esc(sub) + '</span>' : '') + '</div>';
+  }
+
+  // ---------------------------------------------------------------------
+  //  OVERVIEW
+  // ---------------------------------------------------------------------
+  function renderOverview() {
+    const s = state.data.stats || {};
+    const rides = state.data.rides || [];
+    const drivers = state.data.drivers || [];
+    const maxStatus = Math.max(1, ...['pending', 'offered', 'arriving', 'at_pickup', 'on_trip', 'completed', 'cancelled']
+      .map(status => rides.filter(r => r.status === status).length));
+
+    const bars = ['pending', 'offered', 'arriving', 'at_pickup', 'on_trip', 'completed', 'cancelled']
+      .map(status => {
+        const count = rides.filter(r => r.status === status).length;
+        return '<div class="bar-row"><span>' + status.replace('_', ' ') + '</span>' +
+          '<div class="bar"><i style="width:' + Math.round((count / maxStatus) * 100) + '%"></i></div>' +
+          '<b>' + count + '</b></div>';
+      }).join('');
+
+    const recent = rides.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
+
+    $('#view').innerHTML =
+      '<div class="stat-grid">' +
+        statCard('Revenue', money(s.revenue), s.completed + ' completed', 'gold') +
+        statCard('Pending queue', String(s.pending || 0), 'waiting passengers', 'cyan') +
+        statCard('Active', String(s.active || 0), 'matched or on trip') +
+        statCard('Drivers online', String(s.onlineDrivers || 0), 'of ' + (s.drivers || 0)) +
+        statCard('Average fare', money(s.avgFare), 'per completed trip') +
+        statCard('Completion', (s.completionRate || 0) + '%', 'completed vs cancelled', 'green') +
+      '</div>' +
+      '<div class="grid-2">' +
+        '<div class="panel"><div class="panel-head"><h2>Ride status mix</h2><span class="hint">' + rides.length + ' total</span></div>' +
+          '<div class="bars">' + bars + '</div>' +
+          '<div class="panel-head" style="margin-top:18px"><h2>Online drivers</h2><span class="hint">nearest first when dispatching</span></div>' +
+          '<div class="table-wrap"><table><thead><tr><th>Driver</th><th>Status</th><th>Earnings</th><th>Trips</th></tr></thead><tbody>' +
+          (drivers.length ? drivers.map(d =>
+            '<tr><td><div class="cell-main"><strong>' + esc(d.name) + '</strong><span class="sub mono">' + esc(d.id) + '</span></div></td>' +
+            '<td><span class="dot ' + esc(d.status) + '"></span>' + esc(d.status) + '</td>' +
+            '<td class="mono">' + money(d.earnings) + '</td><td class="mono">' + d.trips + '</td></tr>'
+          ).join('') : '<tr><td colspan="4" class="empty">No drivers yet.</td></tr>') +
+          '</tbody></table></div>' +
+        '</div>' +
+        '<div class="panel"><div class="panel-head"><h2>Recent rides</h2><span class="hint">newest first</span></div>' +
+          '<div class="table-wrap"><table><thead><tr><th>Ride</th><th>Route</th><th>Status</th><th>Fare</th></tr></thead><tbody>' +
+          (recent.length ? recent.map(r =>
+            '<tr><td><div class="cell-main"><strong class="mono">' + esc(r.code) + '</strong><span class="sub">' + esc(r.passengerName) + '</span></div></td>' +
+            '<td><div class="cell-main"><strong>' + esc(r.destLabel) + '</strong><span class="sub">from ' + esc(r.pickupLabel) + '</span></div></td>' +
+            '<td>' + statusPill(r.status) + '</td><td class="mono">' + money(r.fare) + '</td></tr>'
+          ).join('') : '<tr><td colspan="4" class="empty">No rides yet.</td></tr>') +
+          '</tbody></table></div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function statusPill(status) {
+    const cls = ['offered', 'arriving', 'at_pickup', 'on_trip'].includes(status) ? 'live'
+      : status === 'completed' ? 'done'
+      : status === 'cancelled' ? 'dead' : '';
+    return '<span class="pill ' + cls + '">' + esc(status.replace('_', ' ')) + '</span>';
+  }
+
+  // ---------------------------------------------------------------------
+  //  QUEUE
+  // ---------------------------------------------------------------------
+  function renderQueues() {
+    const pending = (state.data.rides || []).filter(r => r.status === 'pending')
+      .sort((a, b) => a.createdAt - b.createdAt);
+    $('#view').innerHTML =
+      '<div class="toolbar"><span class="hint" style="color:var(--muted-2);font-size:.72rem">Queue is FIFO per corridor — ' + pending.length + ' waiting.</span>' +
+      '<span class="spacer"></span><button type="button" class="btn btn-primary btn-sm" id="serveNow">Serve next ride →</button></div>' +
+      '<div class="panel"><div class="table-wrap"><table><thead><tr><th>#</th><th>Ride</th><th>Passenger</th><th>Corridor</th><th>Fare</th><th>Queued</th></tr></thead><tbody>' +
+      (pending.length ? pending.map((r, i) =>
+        '<tr><td class="mono">' + (i + 1) + '</td><td class="mono">' + esc(r.code) + '</td>' +
+        '<td>' + esc(r.passengerName) + '</td>' +
+        '<td><div class="cell-main"><strong>' + esc(r.pickupArea || '—') + ' → ' + esc(r.destArea || '—') + '</strong>' +
+        '<span class="sub">' + esc(r.pickupLabel) + ' → ' + esc(r.destLabel) + '</span></div></td>' +
+        '<td class="mono">' + money(r.fare) + '</td><td class="sub">' + new Date(r.createdAt).toLocaleTimeString() + '</td></tr>'
+      ).join('') : '<tr><td colspan="6" class="empty">The shared queue is empty.</td></tr>') +
+      '</tbody></table></div></div>';
+
+    const serve = $('#serveNow');
+    if (serve) serve.addEventListener('click', async () => {
+      try {
+        const res = await api('/ops/serve-next', { method: 'POST' });
+        toast(res.message || 'Served next.', 'ok');
+        refresh();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  ACCOUNTS (drivers / passengers)
+  // ---------------------------------------------------------------------
+  function renderAccounts(entity) {
+    const list = filtered(entity, getEntityList(entity));
+    const isDriver = entity === 'drivers';
+    const columns = isDriver
+      ? ['Driver', 'Status', 'Vehicle', 'Docs', 'Trips', '']
+      : ['Passenger', 'Contact', 'Emergency', 'ID', 'Joined', ''];
+
+    $('#view').innerHTML =
+      toolbar(entity, '+ Add ' + (isDriver ? 'driver' : 'passenger')) +
+      '<div class="panel"><div class="table-wrap"><table><thead><tr>' +
+      columns.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>' +
+      (list.length ? list.map(item =>
+        '<tr>' +
+          '<td><div class="cell-main"><strong>' + esc(item.name) + '</strong><span class="sub mono">' + esc(item.id) + (item.demo ? ' · demo' : '') + '</span></div></td>' +
+          (isDriver
+            ? '<td><span class="dot ' + esc(item.status) + '"></span>' + esc(item.status) + '</td>' +
+              '<td><div class="cell-main"><strong>' + esc(item.vehicle || '—') + '</strong><span class="sub mono">' + esc(item.plate || '') + '</span></div></td>' +
+              '<td class="sub mono">' + esc(item.ltfrb || '—') + '</td>' +
+              '<td class="mono">' + (item.trips || 0) + '</td>'
+            : '<td><div class="cell-main"><strong>' + esc(item.phone || '—') + '</strong><span class="sub">' + esc(item.email || '') + '</span></div></td>' +
+              '<td>' + esc(item.emergency || '—') + '</td>' +
+              '<td>' + (item.hasIdImage ? '✓' : '—') + '</td>' +
+              '<td class="sub">' + (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—') + '</td>') +
+          '<td><div class="row-actions">' +
+            '<button type="button" class="link" data-edit="' + esc(item.id) + '">Edit</button>' +
+            '<button type="button" class="link danger" data-delete="' + esc(item.id) + '">Delete</button>' +
+          '</div></td>' +
+        '</tr>'
+      ).join('') : '<tr><td colspan="' + columns.length + '" class="empty">No ' + entity + ' yet.</td></tr>') +
+      '</tbody></table></div></div>';
+
+    bindToolbar(entity);
+    bindRowActions(entity, () => {
+      const item = getEntityList(entity).find(x => x.id === $('#view').dataset.editId);
+      return item;
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  RIDES
+  // ---------------------------------------------------------------------
+  function renderRides() {
+    const list = filtered('rides', state.data.rides || []).slice().sort((a, b) => b.createdAt - a.createdAt);
+    $('#view').innerHTML =
+      toolbar('rides', '') +
+      '<div class="panel"><div class="table-wrap"><table><thead><tr>' +
+      '<th>Ride</th><th>Passenger</th><th>Driver</th><th>Route</th><th>Km</th><th>Fare</th><th>Status</th><th></th>' +
+      '</tr></thead><tbody>' +
+      (list.length ? list.map(r =>
+        '<tr><td class="mono">' + esc(r.code) + '</td>' +
+        '<td><div class="cell-main"><strong>' + esc(r.passengerName) + '</strong><span class="sub">' + esc(r.phone || '—') + '</span></div></td>' +
+        '<td><div class="cell-main"><strong>' + esc(r.driverName || '—') + '</strong><span class="sub mono">' + esc(r.plate || '') + '</span></div></td>' +
+        '<td><div class="cell-main"><strong>' + esc(r.destLabel) + '</strong><span class="sub">from ' + esc(r.pickupLabel) + '</span></div></td>' +
+        '<td class="mono">' + Number(r.distanceKm).toFixed(1) + '</td>' +
+        '<td class="mono">' + money(r.fare) + '</td>' +
+        '<td>' + statusPill(r.status) + '</td>' +
+        '<td><div class="row-actions">' +
+          '<button type="button" class="link" data-edit-ride="' + esc(r.id) + '">Edit</button>' +
+          '<button type="button" class="link danger" data-delete-ride="' + esc(r.id) + '">Delete</button>' +
+        '</div></td></tr>'
+      ).join('') : '<tr><td colspan="8" class="empty">No rides yet.</td></tr>') +
+      '</tbody></table></div></div>';
+
+    bindToolbar('rides');
+    $$('#view [data-edit-ride]').forEach(btn => btn.addEventListener('click', () => {
+      const ride = (state.data.rides || []).find(r => r.id === btn.dataset.editRide);
+      if (ride) openRideForm(ride);
+    }));
+    $$('#view [data-delete-ride]').forEach(btn => btn.addEventListener('click', () => {
+      const ride = (state.data.rides || []).find(r => r.id === btn.dataset.deleteRide);
+      if (!ride) return;
+      confirmDelete('ride ' + ride.code, () => api('/admin/rides/' + encodeURIComponent(ride.id), { method: 'DELETE' }));
+    }));
+  }
+
+  function openRideForm(ride) {
+    openModal(
+      '<h2>Edit ride</h2><p class="modal-sub mono">' + esc(ride.code) + '</p>' +
+      '<form id="modalForm"><div class="form-grid">' +
+        '<div class="field"><label>Status</label><select name="status">' +
+          ['pending', 'offered', 'arriving', 'at_pickup', 'on_trip', 'completed', 'cancelled']
+            .map(s => '<option ' + (s === ride.status ? 'selected' : '') + '>' + s + '</option>').join('') +
+        '</select></div>' +
+        '<div class="field"><label>Fare (₱)</label><input name="fare" type="number" step="0.01" value="' + ride.fare + '" /></div>' +
+        '<div class="field"><label>Seats</label><input name="seats" type="number" min="1" max="8" value="' + ride.seats + '" /></div>' +
+        '<div class="field"><label>Passenger</label><input value="' + esc(ride.passengerName) + '" disabled /></div>' +
+      '</div>' +
+      '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button>' +
+      '<button type="submit" class="btn btn-primary">Save ride</button></div></form>'
+    );
+    $('#modalForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await api('/admin/rides/' + encodeURIComponent(ride.id), {
+          method: 'PUT',
+          body: { status: fd.get('status'), fare: Number(fd.get('fare')), seats: Number(fd.get('seats')) }
+        });
+        closeModal(); toast('Ride updated.', 'ok'); refresh();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  ROUTES + LOCATIONS
+  // ---------------------------------------------------------------------
+  function renderRoutes() {
+    const list = filtered('routes', state.data.routes || []);
+    $('#view').innerHTML =
+      toolbar('routes', '+ Add route') +
+      '<div class="panel"><div class="table-wrap"><table><thead><tr>' +
+      '<th>Name</th><th>Corridor</th><th>Km</th><th>Base</th><th>Per km</th><th>Active</th><th></th>' +
+      '</tr></thead><tbody>' +
+      (list.length ? list.map(r =>
+        '<tr><td><div class="cell-main"><strong>' + esc(r.name) + '</strong><span class="sub mono">' + esc(r.id) + '</span></div></td>' +
+        '<td>' + esc(r.from) + ' → ' + esc(r.to) + '</td>' +
+        '<td class="mono">' + Number(r.km).toFixed(1) + '</td>' +
+        '<td class="mono">' + money(r.baseFare) + '</td>' +
+        '<td class="mono">' + money(r.perKm) + '</td>' +
+        '<td>' + (r.active ? '<span class="pill done">active</span>' : '<span class="pill dead">off</span>') + '</td>' +
+        '<td><div class="row-actions"><button type="button" class="link" data-edit-route="' + esc(r.id) + '">Edit</button>' +
+        '<button type="button" class="link danger" data-del-route="' + esc(r.id) + '">Delete</button></div></td></tr>'
+      ).join('') : '<tr><td colspan="7" class="empty">No routes yet.</td></tr>') +
+      '</tbody></table></div></div>';
+
+    bindToolbar('routes');
+    $$('#view [data-edit-route]').forEach(btn => btn.addEventListener('click', () => {
+      const item = (state.data.routes || []).find(r => r.id === btn.dataset.editRoute);
+      if (item) openRouteForm(item);
+    }));
+    $$('#view [data-del-route]').forEach(btn => btn.addEventListener('click', () => {
+      const item = (state.data.routes || []).find(r => r.id === btn.dataset.delRoute);
+      if (!item) return;
+      confirmDelete('route ' + item.name, () => api('/admin/routes/' + encodeURIComponent(item.id), { method: 'DELETE' }));
+    }));
+  }
+
+  function renderLocations() {
+    const list = filtered('locations', state.data.locations || []);
+    $('#view').innerHTML =
+      toolbar('locations', '+ Add location') +
+      '<div class="panel"><div class="table-wrap"><table><thead><tr>' +
+      '<th>Name</th><th>Zone</th><th>Coordinates</th><th>Active</th><th></th>' +
+      '</tr></thead><tbody>' +
+      (list.length ? list.map(l =>
+        '<tr><td><div class="cell-main"><strong>' + esc(l.name) + '</strong><span class="sub mono">' + esc(l.id) + '</span></div></td>' +
+        '<td>' + esc(l.zone) + '</td>' +
+        '<td class="mono">' + Number(l.lat).toFixed(4) + ', ' + Number(l.lng).toFixed(4) + '</td>' +
+        '<td>' + (l.active ? '<span class="pill done">active</span>' : '<span class="pill dead">off</span>') + '</td>' +
+        '<td><div class="row-actions"><button type="button" class="link" data-edit-loc="' + esc(l.id) + '">Edit</button>' +
+        '<button type="button" class="link danger" data-del-loc="' + esc(l.id) + '">Delete</button></div></td></tr>'
+      ).join('') : '<tr><td colspan="5" class="empty">No locations yet.</td></tr>') +
+      '</tbody></table></div></div>';
+
+    bindToolbar('locations');
+    $$('#view [data-edit-loc]').forEach(btn => btn.addEventListener('click', () => {
+      const item = (state.data.locations || []).find(l => l.id === btn.dataset.editLoc);
+      if (item) openLocationForm(item);
+    }));
+    $$('#view [data-del-loc]').forEach(btn => btn.addEventListener('click', () => {
+      const item = (state.data.locations || []).find(l => l.id === btn.dataset.delLoc);
+      if (!item) return;
+      confirmDelete('location ' + item.name, () => api('/admin/locations/' + encodeURIComponent(item.id), { method: 'DELETE' }));
+    }));
+  }
+
+  // ---------------------------------------------------------------------
+  //  UI TEXT
+  // ---------------------------------------------------------------------
+  function renderTexts() {
+    const ui = state.data.ui || {};
+    const keys = Object.keys(ui).sort();
+    $('#view').innerHTML =
+      '<div class="toolbar"><span style="font-size:.72rem;color:var(--muted-2)">Labels are served by <code>/api/config</code>.</span>' +
+      '<span class="spacer"></span><button type="button" class="btn btn-primary btn-sm" id="saveAllTexts">Save all</button></div>' +
+      '<div class="panel"><div class="text-list" id="textList">' +
+      (keys.length ? keys.map(key =>
+        '<div class="text-row"><label for="t-' + esc(key) + '">' + esc(key) + '</label>' +
+        '<input id="t-' + esc(key) + '" data-key="' + esc(key) + '" value="' + esc(ui[key]) + '" />' +
+        '<button type="button" class="link danger" data-del-text="' + esc(key) + '">Delete</button></div>'
+      ).join('') : '<p class="empty">No text keys.</p>') +
+      '</div></div>';
+
+    $$('#view [data-del-text]').forEach(btn => btn.addEventListener('click', () => {
+      const key = btn.dataset.delText;
+      confirmDelete('text key ' + key, () => api('/admin/texts/' + encodeURIComponent(key), { method: 'DELETE' }));
+    }));
+    const save = $('#saveAllTexts');
+    if (save) save.addEventListener('click', async () => {
+      const payload = {};
+      $$('#textList [data-key]').forEach(input => { payload[input.dataset.key] = input.value; });
+      try {
+        await api('/config', { method: 'POST', body: { ui: payload } });
+        toast('UI text saved.', 'ok');
+        refresh();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  SETTINGS
+  // ---------------------------------------------------------------------
+  function renderSettings() {
+    const s = state.data.settings || {};
+    $('#view').innerHTML =
+      '<div class="grid-2">' +
+        '<div class="panel"><div class="panel-head"><h2>Fare + dispatch</h2><span class="hint">stored in the engine</span></div>' +
+          '<form id="settingsForm"><div class="form-grid">' +
+            '<div class="field span-2"><label>Service name</label><input name="serviceName" value="' + esc(s.serviceName || 'Sibat Na') + '" /></div>' +
+            '<div class="field"><label>Base fare (₱)</label><input name="baseFare" type="number" step="0.01" value="' + esc(s.baseFare) + '" /></div>' +
+            '<div class="field"><label>Included km</label><input name="includedKm" type="number" step="0.1" value="' + esc(s.includedKm) + '" /></div>' +
+            '<div class="field"><label>Per extra km (₱)</label><input name="perKm" type="number" step="0.01" value="' + esc(s.perKm) + '" /></div>' +
+            '<div class="field"><label>Match delay (seconds)</label><input name="matchDelaySeconds" type="number" min="1" max="30" value="' + esc(s.matchDelaySeconds) + '" /></div>' +
+            '<div class="field"><label>Dispatch mode</label><select name="dispatchMode">' +
+              '<option value="auto"' + (s.dispatchMode === 'auto' ? ' selected' : '') + '>auto (simulation)</option>' +
+              '<option value="manual"' + (s.dispatchMode === 'manual' ? ' selected' : '') + '>manual (serve next)</option>' +
+            '</select></div>' +
+            '<div class="field"><label>Currency symbol</label><input value="' + esc(s.currency || '₱') + '" disabled /></div>' +
+          '</div>' +
+          '<p class="modal-sub" style="margin-top:10px">' + esc(s.fareRule || '') + '</p>' +
+          '<div class="settings-actions"><button type="submit" class="btn btn-primary">Save settings</button></div></form>' +
+        '</div>' +
+        '<div class="panel"><div class="panel-head"><h2>Danger zone</h2><span class="hint">demo data only</span></div>' +
+          '<p style="font-size:.78rem;color:var(--muted);line-height:1.55">Reset reseeds the demo engine (' +
+            (state.local ? 'browser localStorage' : '<code>data/state.json</code>') +
+            ') with the demo drivers, locations and routes. Every ride is removed.</p>' +
+          '<div class="settings-actions"><button type="button" class="btn btn-danger" id="resetBtn">Reset demo data</button></div>' +
+          '<div class="panel-head" style="margin-top:22px"><h2>Engine</h2><span class="hint">' +
+            esc(state.local ? 'browser local engine' : (state.base || location.origin)) + '</span></div>' +
+          '<p style="font-size:.78rem;color:var(--muted);line-height:1.55">' +
+            (state.local
+              ? 'C++ server not running, so the console is using the browser-local demo engine. Start run.bat to switch to C++.'
+              : 'JSON API · single-binary C++ · no external dependencies.') + '</p>' +
+          '<div class="settings-actions"><button type="button" class="btn btn-ghost" id="pingBtn">Ping /api/health</button></div>' +
+        '</div>' +
+      '</div>';
+
+    $('#settingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await api('/config', {
+          method: 'POST',
+          body: {
+            settings: {
+              serviceName: fd.get('serviceName'),
+              baseFare: Number(fd.get('baseFare')),
+              includedKm: Number(fd.get('includedKm')),
+              perKm: Number(fd.get('perKm')),
+              matchDelaySeconds: Number(fd.get('matchDelaySeconds')),
+              dispatchMode: fd.get('dispatchMode')
+            }
+          }
+        });
+        toast('Settings saved.', 'ok');
+        refresh();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    $('#resetBtn').addEventListener('click', () => {
+      confirmDelete('ALL demo data', async () => {
+        await api('/reset', { method: 'POST' });
+        toast('Demo data reset.', 'ok');
+        refresh();
+      });
+    });
+
+    $('#pingBtn').addEventListener('click', async () => {
+      try {
+        const res = await api('/health');
+        toast('Engine ' + res.version + ' · ' + res.engine + ' · ' + res.time, 'ok');
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  FORMS
+  // ---------------------------------------------------------------------
+  function openAccountForm(entity, item) {
+    const editing = !!item;
+    const isDriver = entity === 'drivers';
+    const v = item || {};
+    openModal(
+      '<h2>' + (editing ? 'Edit ' : 'New ') + (isDriver ? 'driver' : 'passenger') + '</h2>' +
+      '<p class="modal-sub">' + (editing ? esc(v.id) : 'Saved through /api/admin/' + entity) + '</p>' +
+      '<form id="modalForm">' +
+      '<div class="form-grid">' +
+        '<div class="field span-2"><label>Full name</label><input name="name" required value="' + esc(v.name || '') + '" /></div>' +
+        '<div class="field"><label>Email</label><input name="email" type="email" value="' + esc(v.email || '') + '" /></div>' +
+        '<div class="field"><label>Phone</label><input name="phone" value="' + esc(v.phone || '') + '" /></div>' +
+        (isDriver
+          ? '<div class="field"><label>Status</label><select name="status">' +
+              ['offline', 'online', 'busy'].map(x => '<option ' + (x === (v.status || 'offline') ? 'selected' : '') + '>' + x + '</option>').join('') +
+            '</select></div>' +
+            '<div class="field"><label>Plate</label><input name="plate" value="' + esc(v.plate || '') + '" /></div>' +
+            '<div class="field"><label>Vehicle</label><input name="vehicle" value="' + esc(v.vehicle || '') + '" /></div>' +
+            '<div class="field"><label>Licence no.</label><input name="license" value="' + esc(v.license || '') + '" /></div>' +
+            '<div class="field"><label>NBI no.</label><input name="nbi" value="' + esc(v.nbi || '') + '" /></div>' +
+            '<div class="field"><label>OR / CR no.</label><input name="orcr" value="' + esc(v.orcr || '') + '" /></div>' +
+            '<div class="field"><label>LTFRB no.</label><input name="ltfrb" value="' + esc(v.ltfrb || '') + '" /></div>'
+          : '') +
+        '<div class="field span-2"><label>Emergency contact</label><input name="emergency" value="' + esc(v.emergency || '') + '" /></div>' +
+      '</div>' +
+      '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button>' +
+      '<button type="submit" class="btn btn-primary">' + (editing ? 'Save changes' : 'Create') + '</button></div>' +
+      '</form>'
+    );
+    $('#modalForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = {};
+      fd.forEach((value, key) => { payload[key] = value; });
+      try {
+        await api('/admin/' + entity + (editing ? '/' + encodeURIComponent(v.id) : ''), {
+          method: editing ? 'PUT' : 'POST', body: payload
+        });
+        closeModal();
+        toast(editing ? 'Account saved.' : 'Account created.', 'ok');
+        refresh();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
+  function openRouteForm(item) {
+    const editing = !!item;
+    const v = item || { name: '', from: '', to: '', km: 6, baseFare: 15, perKm: 2.5, active: true };
+    openModal(
+      '<h2>' + (editing ? 'Edit route' : 'New route') + '</h2><p class="modal-sub">Fare corridor</p>' +
+      '<form id="modalForm"><div class="form-grid">' +
+        '<div class="field span-2"><label>Name</label><input name="name" required value="' + esc(v.name) + '" /></div>' +
+        '<div class="field"><label>From zone</label><input name="from" value="' + esc(v.from) + '" /></div>' +
+        '<div class="field"><label>To zone</label><input name="to" value="' + esc(v.to) + '" /></div>' +
+        '<div class="field"><label>Distance km</label><input name="km" type="number" step="0.1" value="' + esc(v.km) + '" /></div>' +
+        '<div class="field"><label>Base fare</label><input name="baseFare" type="number" step="0.01" value="' + esc(v.baseFare) + '" /></div>' +
+        '<div class="field"><label>Per km</label><input name="perKm" type="number" step="0.01" value="' + esc(v.perKm) + '" /></div>' +
+        '<label class="check-row"><input type="checkbox" name="active"' + (v.active ? ' checked' : '') + ' /> Active</label>' +
+      '</div>' +
+      '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button>' +
+      '<button type="submit" class="btn btn-primary">' + (editing ? 'Save changes' : 'Create route') + '</button></div></form>'
+    );
+    $('#modalForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await api('/admin/routes' + (editing ? '/' + encodeURIComponent(v.id) : ''), {
+          method: editing ? 'PUT' : 'POST',
+          body: {
+            name: fd.get('name'), from: fd.get('from'), to: fd.get('to'),
+            km: Number(fd.get('km')), baseFare: Number(fd.get('baseFare')),
+            perKm: Number(fd.get('perKm')), active: fd.has('active')
+          }
+        });
+        closeModal(); toast('Route saved.', 'ok'); refresh();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
+  function openLocationForm(item) {
+    const editing = !!item;
+    const v = item || { name: '', zone: '', lat: 14.5995, lng: 120.9842, active: true };
+    openModal(
+      '<h2>' + (editing ? 'Edit location' : 'New location') + '</h2><p class="modal-sub">Saved landmark</p>' +
+      '<form id="modalForm"><div class="form-grid">' +
+        '<div class="field span-2"><label>Name</label><input name="name" required value="' + esc(v.name) + '" /></div>' +
+        '<div class="field span-2"><label>Zone</label><input name="zone" value="' + esc(v.zone) + '" /></div>' +
+        '<div class="field"><label>Latitude</label><input name="lat" type="number" step="any" value="' + esc(v.lat) + '" /></div>' +
+        '<div class="field"><label>Longitude</label><input name="lng" type="number" step="any" value="' + esc(v.lng) + '" /></div>' +
+        '<label class="check-row span-2"><input type="checkbox" name="active"' + (v.active ? ' checked' : '') + ' /> Active</label>' +
+      '</div>' +
+      '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button>' +
+      '<button type="submit" class="btn btn-primary">' + (editing ? 'Save changes' : 'Create location') + '</button></div></form>'
+    );
+    $('#modalForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await api('/admin/locations' + (editing ? '/' + encodeURIComponent(v.id) : ''), {
+          method: editing ? 'PUT' : 'POST',
+          body: {
+            name: fd.get('name'), zone: fd.get('zone'),
+            lat: Number(fd.get('lat')), lng: Number(fd.get('lng')),
+            active: fd.has('active')
+          }
+        });
+        closeModal(); toast('Location saved.', 'ok'); refresh();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  SHARED UI
+  // ---------------------------------------------------------------------
+  function toolbar(entity, addLabel) {
+    return '<div class="toolbar">' +
+      (addLabel ? '<button type="button" class="btn btn-primary btn-sm" id="addEntity">' + addLabel + '</button>' : '') +
+      '<span class="spacer"></span>' +
+      '<div class="search"><span>⌕</span><input id="searchInput" placeholder="Filter ' + entity + '…" value="' + esc(state.search[entity] || '') + '" /></div>' +
+      '</div>';
+  }
+
+  function bindToolbar(entity) {
+    const input = $('#searchInput');
+    if (input) input.addEventListener('input', () => {
+      state.search[entity] = input.value;
+      render();
+      const again = $('#searchInput');
+      if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+    });
+    const add = $('#addEntity');
+    if (add) add.addEventListener('click', () => openCreate(entity));
+  }
+
+  function openCreate(entity) {
+    if (entity === 'drivers' || entity === 'passengers') openAccountForm(entity, null);
+    if (entity === 'routes') openRouteForm(null);
+    if (entity === 'locations') openLocationForm(null);
+  }
+
+  function bindRowActions(entity, getItem) {
+    $$('#view [data-edit]').forEach(btn => btn.addEventListener('click', () => {
+      const item = getEntityList(entity).find(x => x.id === btn.dataset.edit);
+      if (item) openAccountForm(entity, item);
+    }));
+    $$('#view [data-delete]').forEach(btn => btn.addEventListener('click', () => {
+      const item = getEntityList(entity).find(x => x.id === btn.dataset.delete);
+      if (!item) return;
+      confirmDelete((entity === 'drivers' ? 'driver ' : 'passenger ') + item.name,
+        () => api('/admin/' + entity + '/' + encodeURIComponent(item.id), { method: 'DELETE' }));
+    }));
+  }
+
+  function openModal(html) {
+    const root = $('#modalRoot');
+    root.innerHTML = '<div class="modal"><button type="button" class="modal-x" data-close>×</button>' + html + '</div>';
+    root.classList.add('is-open');
+    root.onclick = (e) => { if (e.target === root || e.target.hasAttribute('data-close')) closeModal(); };
+    document.addEventListener('keydown', escClose);
+  }
+  function escClose(e) { if (e.key === 'Escape') closeModal(); }
+  function closeModal() {
+    $('#modalRoot').classList.remove('is-open');
+    document.removeEventListener('keydown', escClose);
+  }
+
+  function confirmDelete(what, action) {
+    openModal(
+      '<h2>Delete ' + esc(what) + '?</h2>' +
+      '<p class="modal-sub">This is a demo; the change is written to <code>data/state.json</code> immediately.</p>' +
+      '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Keep</button>' +
+      '<button type="button" class="btn btn-danger" id="confirmGo">Delete</button></div>'
+    );
+    $('#confirmGo').addEventListener('click', async () => {
+      try {
+        await action();
+        closeModal();
+        toast('Deleted.', 'ok');
+        refresh();
+      } catch (err) { toast(err.message, 'error'); }
+    }, { once: true });
+  }
+
+  // ---------------------------------------------------------------------
+  //  BOOT
+  // ---------------------------------------------------------------------
+  function boot() {
+    $$('#nav button').forEach(btn => btn.addEventListener('click', () => {
+      state.view = btn.dataset.view;
+      render();
+    }));
+    $('#refreshBtn').addEventListener('click', refresh);
+    $('#retryBtn').addEventListener('click', refresh);
+    $('#quickAdd').addEventListener('click', () => openCreate(state.view));
+    refresh();
+    setInterval(() => {
+      if (state.online && document.visibilityState === 'visible') refresh();
+    }, 6000);
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

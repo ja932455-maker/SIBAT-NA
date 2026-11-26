@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="night">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#070914" />
+  <meta name="description" content="Sibat Na — a demo shared-ride transportation management system powered by a C++ engine." />
+  <title>Sibat Na — Share the road. Split the fare.</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="assets/brand/sibat-na-logo-256.png" />
+  <link rel="apple-touch-icon" href="assets/brand/sibat-na-logo-256.png" />
+  <link rel="stylesheet" href="frontend/app.css" />
+  <link rel="stylesheet" href="frontend/driver.css" />
+  <link rel="stylesheet" href="frontend/bike-game.css" />
+</head>
+<body>
+
+<!-- =========================================================================
+     BRAND SPRITE — neon 2D big bike shared by the login lane and the game.
+     ========================================================================= -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <symbol id="sibatBike" viewBox="0 0 200 110">
+    <defs>
+      <linearGradient id="bikeLine" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#f2feff" />
+        <stop offset="0.42" stop-color="#00d9ff" />
+        <stop offset="1" stop-color="#087bff" />
+      </linearGradient>
+      <linearGradient id="bikeBody" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0a2342" />
+        <stop offset="1" stop-color="#040a17" />
+      </linearGradient>
+      <filter id="bikeGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="1.7" result="bikeBlur" />
+        <feMerge><feMergeNode in="bikeBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+    </defs>
+    <g fill="none" stroke="url(#bikeLine)" stroke-linecap="round" stroke-linejoin="round" filter="url(#bikeGlow)">
+      <!-- rear wheel -->
+      <circle cx="38" cy="84" r="22" stroke-width="4.5" />
+      <circle cx="38" cy="84" r="12" stroke-width="2" opacity=".65" />
+      <path d="M38 64v40M18 84h40M24 70l28 28M52 70 24 98" stroke-width="1.6" opacity=".7" />
+      <!-- front wheel -->
+      <circle cx="162" cy="84" r="22" stroke-width="4.5" />
+      <circle cx="162" cy="84" r="12" stroke-width="2" opacity=".65" />
+      <path d="M162 64v40M142 84h40M148 70l28 28M176 70l-28 28" stroke-width="1.6" opacity=".7" />
+      <!-- swingarm + chain -->
+      <path d="M38 84 94 74" stroke-width="4" />
+      <path d="M42 94 96 82" stroke-width="1.6" opacity=".55" />
+      <!-- engine / belly -->
+      <path d="M86 64h24l4 18-28 2-6-12Z" fill="url(#bikeBody)" stroke-width="2.2" />
+      <!-- raised tail + seat -->
+      <path d="M58 58c-2-12 7-22 22-24l18 4 2 12-18 6-24 4Z" fill="url(#bikeBody)" stroke-width="2.4" />
+      <!-- fuel tank -->
+      <path d="M98 48c6-9 19-11 29-6l7 8-10 10-24 2-6-8Z" fill="url(#bikeBody)" stroke-width="2.4" />
+      <path d="M101 44c7-3 15-4 22-2" stroke-width="1.4" opacity=".55" />
+      <!-- front fairing -->
+      <path d="M130 42l14 5 12 15-3 14-15 6-13-12Z" fill="url(#bikeBody)" stroke-width="2.4" />
+      <path d="M128 66l17 5" stroke-width="1.6" opacity=".55" />
+      <!-- frame trellis -->
+      <path d="M98 52 122 68 98 72M98 72 84 66" stroke-width="1.8" opacity=".8" />
+      <!-- front fork, bar, fender -->
+      <path d="M162 84 140 48M156 87 134 51" stroke-width="3.2" />
+      <path d="M140 44 128 35 118 34" stroke-width="3" />
+      <path d="M134 66c8-9 22-11 32-4" stroke-width="3" opacity=".8" />
+      <!-- exhaust + headlight + taillight -->
+      <path d="M70 80 50 86H40" stroke="#ffd93d" stroke-width="3" />
+      <path d="M142 54l14 6-10 7" fill="#ffd93d" stroke="none" opacity=".95" />
+      <path d="M58 46l-5 4" stroke="#ff315f" stroke-width="3" />
+    </g>
+    <!-- rider -->
+    <g stroke-linecap="round" stroke-linejoin="round" filter="url(#bikeGlow)">
+      <path d="M112 27 96 44 88 54l12 2 14-14Z" fill="rgba(0,217,255,.14)" stroke="url(#bikeLine)" stroke-width="2.2" />
+      <circle cx="112" cy="17" r="8" fill="#00d9ff" />
+      <circle cx="112" cy="17" r="11" fill="none" stroke="url(#bikeLine)" stroke-width="1.4" opacity=".4" />
+      <path d="M110 27 122 34 132 38" fill="none" stroke="url(#bikeLine)" stroke-width="4" />
+      <path d="M94 45 82 60" fill="none" stroke="url(#bikeLine)" stroke-width="5" />
+      <path d="M82 60 90 74" fill="none" stroke="url(#bikeLine)" stroke-width="4.2" />
+    </g>
+  </symbol>
+</svg>
+
+<!-- =========================================================================
+     CODE MAP — where each feature lives
+       LOGIN FLOW (screens 0…6) ......... this file, #authScreen
+                                           + frontend/app.js section 1
+                                           demo OTP = 123456, saved to sibatNaAccount
+       PASSENGER DASHBOARD .............. this file, #appShell
+                                           + frontend/app.js section 2
+                                           Photon search, OSRM route, booking, queue
+       DRIVER MODE ..................... this file, #driverMode
+                                           + frontend/driver.js + driver.css
+                                           demo gate = 2468, Ctrl+Shift+2
+       OPERATIONS CENTER ............... this file, #opsScreen
+                                           + frontend/app.js section 3
+       SIBAT RUN MINI-GAME ............. frontend/bike-game.js + bike-game.css
+                                           Ctrl+Shift+G · offline 2D big-bike runner
+       MOBILE GUI ...................... .mobile-hero, .mobile-tabs, <=1080px media queries
+       ADMIN CONSOLE ................... assets/compiled/frontend-all.html
+       ENGINE + FARE + QUEUE ........... backend/src/core.cpp (authoritative)
+       LOCAL FALLBACK (file:// / no server) frontend/local-engine.js
+       HTTP API ........................ backend/src/server.cpp
+       MySQL schema .................... backend/schema.sql
+     ========================================================================= -->
+<!-- =========================================================================
+     ENGINE BANNER — shown when the C++ API on :8787 is not reachable
+     ========================================================================= -->
+<div id="engineBanner" class="engine-banner" hidden>
+  <span class="engine-dot"></span>
+  <strong>C++ engine offline.</strong>
+  <span>Start <code>run.bat</code>, then retry. Login still works from local storage.</span>
+  <button type="button" id="engineRetry" class="btn btn-ghost btn-sm">Retry</button>
+</div>
+
+<!-- =========================================================================
+     LOGIN / REGISTRATION  — screens data-step="0" … "6"
+     DEMO ONLY: the OTP is always 123456. No real SMS is sent.
+     ========================================================================= -->
+<div id="authScreen" class="auth-screen">
+
+  <aside class="auth-visual">
+    <div class="auth-visual-top">
+      <span class="brand-mark brand-mark-lg">
+        <img class="brand-logo" src="assets/brand/sibat-na-logo-256.png" alt="Sibat Na logo" width="76" height="76" />
+      </span>
+      <div class="auth-brand-text">
+        <p class="auth-kicker">SIBAT <span>NA</span></p>
+        <p class="auth-sub">Cebuano for “go ahead”</p>
+        <span class="auth-brand-rule" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <h1 class="auth-headline">One ride.<br />Many seats.<br /><span>One shared queue.</span></h1>
+    <p class="auth-copy">
+      A single-page transport management demo: passengers queue for a shared ride,
+      drivers accept from a Grab-style panel, and every fare comes from the C++ engine.
+    </p>
+
+    <ul class="auth-features">
+      <li><span>01</span> Live OSM search with Photon + OSRM routing</li>
+      <li><span>02</span> Shared FIFO queue with real position tracking</li>
+      <li><span>03</span> Day / night map that recolours the route</li>
+    </ul>
+
+    <div class="neon-lane" id="neonLane">
+      <div class="neon-lane-head">
+        <span class="neon-lane-tag">Neon route</span>
+        <span class="neon-lane-live"><i></i>Live</span>
+      </div>
+      <div class="neon-lane-track" aria-hidden="true">
+        <span class="neon-lane-glow"></span>
+        <span class="neon-lane-line"></span>
+        <span class="neon-lane-streak neon-lane-streak-a"></span>
+        <span class="neon-lane-streak neon-lane-streak-b"></span>
+        <span class="neon-lane-streak neon-lane-streak-c"></span>
+        <span class="neon-lane-bike">
+          <span class="neon-lane-shadow"></span>
+          <svg class="bike-svg" viewBox="0 0 200 110"><use href="#sibatBike"></use></svg>
+        </span>
+      </div>
+      <div class="neon-lane-foot">
+        <p>Quezon City <span>→</span> Makati <span>→</span> BGC</p>
+        <button type="button" class="neon-lane-play" data-run-open aria-label="Play the Sibat Run bike game">
+          <span>Play</span>
+          <kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>G</kbd>
+        </button>
+      </div>
+    </div>
+
+    <p class="auth-demo-note">Demo build · fictional people, places and fares</p>
+  </aside>
+
+  <main class="auth-panel">
+    <div class="auth-panel-top">
+      <button class="brand brand-compact" id="authHome" type="button" aria-label="Back to role selection">
+        <span class="brand-mark">
+          <img class="brand-logo" src="assets/brand/sibat-na-logo-256.png" alt="" width="34" height="34" />
+        </span>
+        <span class="brand-text">Sibat<span>Na</span></span>
+      </button>
+      <span class="chip chip-gold">DEMO BUILD</span>
+    </div>
+
+    <ol class="auth-progress" id="authProgress" aria-label="Registration progress">
+      <li data-dot="0" class="is-active"></li><li data-dot="1"></li><li data-dot="2"></li>
+      <li data-dot="3"></li><li data-dot="4"></li><li data-dot="5"></li><li data-dot="6"></li>
+    </ol>
+
+    <!-- Compact neon lane for phones/tablets: no keyboard needed to play. -->
+    <div class="mobile-hero" aria-label="Neon route preview">
+      <div class="neon-lane mobile-lane">
+        <div class="neon-lane-head">
+          <span class="neon-lane-tag">Neon route</span>
+          <span class="neon-lane-live"><i></i>Live</span>
+        </div>
+        <div class="neon-lane-track mobile-lane-track" aria-hidden="true">
+          <span class="neon-lane-glow"></span>
+          <span class="neon-lane-line"></span>
+          <span class="neon-lane-streak neon-lane-streak-a"></span>
+          <span class="neon-lane-streak neon-lane-streak-b"></span>
+          <span class="neon-lane-streak neon-lane-streak-c"></span>
+          <span class="neon-lane-bike">
+            <span class="neon-lane-shadow"></span>
+            <svg class="bike-svg" viewBox="0 0 200 110"><use href="#sibatBike"></use></svg>
+          </span>
+        </div>
+        <div class="neon-lane-foot">
+          <p>Quezon City <span>→</span> Makati <span>→</span> BGC</p>
+          <button type="button" class="neon-lane-play" data-run-open aria-label="Play the Sibat Run bike game">
+            <span>Play SIBAT RUN</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-stage">
+
+      <!-- =================================================================
+           LOGIN STEP 0 — CHOOSE ROLE
+           ================================================================= -->
+      <section class="auth-step is-active" data-step="0">
+        <p class="eyebrow">Step 1 of 7 · Account type</p>
+        <h2 class="auth-title">How will you ride today?</h2>
+        <p class="auth-lead">Pick a role. You can always sign in again as the other one.</p>
+
+        <div class="role-grid" role="radiogroup" aria-label="Choose account role">
+          <button type="button" class="role-card is-selected" data-role="passenger" role="radio" aria-checked="true">
+            <span class="role-icon">
+              <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+                <circle cx="16" cy="10" r="5" fill="currentColor" />
+                <path d="M7 27c0-5 4-9 9-9s9 4 9 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="role-name">Passenger</span>
+            <span class="role-desc">Book a seat, track the queue, pay the fare on arrival.</span>
+            <span class="role-tick">✓</span>
+          </button>
+          <button type="button" class="role-card" data-role="driver" role="radio" aria-checked="false">
+            <span class="role-icon">
+              <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+                <path d="M5 20l2-7h18l2 7v5H5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                <circle cx="10" cy="25" r="2.4" fill="currentColor" /><circle cx="22" cy="25" r="2.4" fill="currentColor" />
+                <path d="M12 13l1-4h6l1 4" fill="none" stroke="currentColor" stroke-width="2" />
+              </svg>
+            </span>
+            <span class="role-name">Driver</span>
+            <span class="role-desc">Go online, accept matches and run the trip phases.</span>
+            <span class="role-tick">✓</span>
+          </button>
+        </div>
+
+        <p class="demo-hint"><span>DEMO</span> Driver accounts also store licence, NBI, OR/CR and LTFRB numbers (all fictional).</p>
+        <button type="button" class="btn btn-primary btn-block" id="roleContinue">Continue as Passenger</button>
+      </section>
+
+      <!-- =================================================================
+           LOGIN STEP 1 — MOBILE NUMBER  (demo OTP will be 123456)
+           ================================================================= -->
+      <section class="auth-step" data-step="1">
+        <p class="eyebrow">Step 2 of 7 · Mobile number</p>
+        <h2 class="auth-title">What’s your mobile number?</h2>
+        <p class="auth-lead">We’ll send a 6-digit code to verify it’s you.</p>
+
+        <label class="field-label" for="phoneInput">Mobile number</label>
+        <div class="phone-field">
+          <span class="phone-prefix">+63</span>
+          <input id="phoneInput" class="input input-phone" type="tel" inputmode="numeric"
+                 autocomplete="tel-national" placeholder="917 123 4567" maxlength="12"
+                 aria-describedby="phoneError" />
+        </div>
+        <p class="field-error" id="phoneError" role="alert"></p>
+
+        <p class="demo-hint"><span>DEMO</span> Any 10-digit number starting with 9 works. No SMS is sent.</p>
+
+        <button type="button" class="btn btn-primary btn-block" id="sendOtpBtn">Continue with mobile</button>
+        <button type="button" class="link-btn" data-goto="0">← Back</button>
+      </section>
+
+      <!-- =================================================================
+           LOGIN STEP 2 — VERIFY CODE (the demo OTP is literally 123456)
+           ================================================================= -->
+      <section class="auth-step" data-step="2">
+        <p class="eyebrow">Step 3 of 7 · Verify</p>
+        <h2 class="auth-title">Enter the 6-digit code</h2>
+        <p class="auth-lead">Sent to <strong id="otpPhone">+63 917 123 4567</strong> · <span class="muted">demo code below</span></p>
+
+        <div class="otp-row" id="otpRow" role="group" aria-label="6-digit verification code">
+          <input class="otp-digit" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1" />
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="Digit 2" />
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="Digit 3" />
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="Digit 4" />
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="Digit 5" />
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="Digit 6" />
+        </div>
+        <p class="field-error" id="otpError" role="alert"></p>
+
+        <div class="demo-code">
+          <span>DEMO CODE</span>
+          <strong>1 2 3 4 5 6</strong>
+          <button type="button" class="link-btn" id="fillOtpBtn">Autofill</button>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-block" id="verifyOtpBtn">Verify code</button>
+        <div class="auth-row">
+          <button type="button" class="link-btn" data-goto="1">← Change number</button>
+          <button type="button" class="link-btn" id="resendOtp">Resend code</button>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           LOGIN STEP 3 — PERSONAL INFORMATION (+ driver documents)
+           ================================================================= -->
+      <section class="auth-step" data-step="3">
+        <p class="eyebrow">Step 4 of 7 · About you</p>
+        <h2 class="auth-title">Personal information</h2>
+        <p class="auth-lead">Only the name and email are required. Everything is fictional demo data.</p>
+
+        <div class="form-grid">
+          <div class="field span-2">
+            <label class="field-label" for="fullName">Full name</label>
+            <input class="input" id="fullName" type="text" autocomplete="name" placeholder="Juan Dela Cruz" />
+          </div>
+          <div class="field span-2">
+            <label class="field-label" for="emailInput">Email</label>
+            <input class="input" id="emailInput" type="email" autocomplete="email" placeholder="juan@example.com" />
+          </div>
+          <div class="field span-2">
+            <label class="field-label" for="emergencyInput">Emergency contact <span class="optional">optional</span></label>
+            <input class="input" id="emergencyInput" type="tel" placeholder="+63 917 000 0000" />
+          </div>
+        </div>
+
+        <div id="driverDocs" class="docs-block" hidden>
+          <div class="docs-head">
+            <span class="chip chip-cyan">DRIVER REQUIREMENTS</span>
+            <p>Demo values are accepted — paste anything that looks official.</p>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label class="field-label" for="licenseInput">Driver’s licence no.</label><input class="input" id="licenseInput" placeholder="N01-23-456789" /></div>
+            <div class="field"><label class="field-label" for="nbiInput">NBI clearance no.</label><input class="input" id="nbiInput" placeholder="NBI-2026-0001" /></div>
+            <div class="field"><label class="field-label" for="orcrInput">OR / CR no.</label><input class="input" id="orcrInput" placeholder="OR-CR-7781" /></div>
+            <div class="field"><label class="field-label" for="ltfrbInput">LTFRB / TNVS no.</label><input class="input" id="ltfrbInput" placeholder="LTFRB-TNVS-881" /></div>
+            <div class="field span-2"><label class="field-label" for="otherDocsInput">Other documents <span class="optional">optional</span></label><input class="input" id="otherDocsInput" placeholder="Insurance, medical, etc." /></div>
+            <div class="field"><label class="field-label" for="plateInput">Plate number</label><input class="input" id="plateInput" placeholder="NCR 1234" /></div>
+            <div class="field"><label class="field-label" for="vehicleInput">Vehicle</label><input class="input" id="vehicleInput" placeholder="Toyota Vios" /></div>
+          </div>
+        </div>
+
+        <p class="field-error" id="infoError" role="alert"></p>
+        <button type="button" class="btn btn-primary btn-block" id="saveInfoBtn">Save personal information</button>
+        <button type="button" class="link-btn" data-goto="2">← Back</button>
+      </section>
+
+      <!-- =================================================================
+           LOGIN STEP 4 — IDENTITY (optional ID image)
+           ================================================================= -->
+      <section class="auth-step" data-step="4">
+        <p class="eyebrow">Step 5 of 7 · Identity <span class="optional">optional</span></p>
+        <h2 class="auth-title">Add a valid ID</h2>
+        <p class="auth-lead">Upload one image, or skip — the demo never verifies it.</p>
+
+        <label class="upload-zone" id="uploadZone" for="idUpload">
+          <input type="file" id="idUpload" accept="image/png,image/jpeg,image/webp" hidden />
+          <span class="upload-icon">＋</span>
+          <span class="upload-title">Drop an ID image here or browse</span>
+          <span class="upload-note">PNG / JPG / WEBP · max 1.5 MB · stored locally only</span>
+        </label>
+
+        <figure class="id-preview" id="idPreviewWrap" hidden>
+          <img id="idPreview" alt="Selected ID preview" />
+          <figcaption>
+            <span id="idFileName">id.png</span>
+            <button type="button" class="link-btn" id="removeIdBtn">Remove</button>
+          </figcaption>
+        </figure>
+
+        <div class="auth-row auth-row-end">
+          <button type="button" class="btn btn-ghost" id="skipIdBtn">Skip for now</button>
+          <button type="button" class="btn btn-primary" id="saveIdBtn" disabled>Use this ID</button>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           LOGIN STEP 5 — PROFILE READY (saves sibatNaAccount)
+           ================================================================= -->
+      <section class="auth-step" data-step="5">
+        <p class="eyebrow">Step 6 of 7 · Profile ready</p>
+        <div class="welcome-orb">
+          <span id="welcomeInitials">SN</span>
+          <i></i>
+        </div>
+        <h2 class="auth-title">Welcome, <span id="welcomeName">Juan</span>.</h2>
+        <p class="auth-lead">Your <strong id="welcomeRole">passenger</strong> profile is ready. Review it, then log in.</p>
+
+        <dl class="summary-list" id="accountSummary">
+          <div><dt>Mobile</dt><dd id="sumPhone">—</dd></div>
+          <div><dt>Email</dt><dd id="sumEmail">—</dd></div>
+          <div><dt>Emergency</dt><dd id="sumEmergency">—</dd></div>
+          <div id="sumDocsRow" hidden><dt>Documents</dt><dd id="sumDocs">—</dd></div>
+        </dl>
+
+        <p class="demo-hint"><span>DEMO</span> “Log in” stores this profile as <code>sibatNaAccount</code> in localStorage and registers it with the C++ engine.</p>
+        <button type="button" class="btn btn-primary btn-block" id="finishLoginBtn">Log in to Sibat Na</button>
+        <button type="button" class="link-btn" data-goto="3">← Edit details</button>
+      </section>
+
+      <!-- =================================================================
+           LOGIN STEP 6 — DESTINATION (passenger dashboard / driver mode)
+           ================================================================= -->
+      <section class="auth-step" data-step="6">
+        <p class="eyebrow">Step 7 of 7 · Destination</p>
+        <h2 class="auth-title" id="step6Title">You’re in.</h2>
+        <p class="auth-lead" id="step6Copy">Your account is saved. Choose where to go next.</p>
+
+        <div class="launch-grid" id="launchGrid">
+          <button type="button" class="launch-card" id="launchPrimary">
+            <span class="launch-icon" id="launchIcon">➜</span>
+            <strong id="launchPrimaryTitle">Open the ride dashboard</strong>
+            <span id="launchPrimaryCopy">Search a destination and join the shared queue.</span>
+          </button>
+          <button type="button" class="launch-card launch-card-ghost" id="launchSecondary">
+            <span class="launch-icon">⌘</span>
+            <strong id="launchSecondaryTitle">Open operator tools</strong>
+            <span id="launchSecondaryCopy">Serve the queue, edit locations and run a simulation.</span>
+          </button>
+        </div>
+
+        <p class="demo-hint"><span>TIP</span> <span class="desktop-only-inline"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd> demo passenger · <kbd>2</kbd> driver panel · <kbd>4</kbd> reset demo data.</span><span class="mobile-only-inline">After launch, use the bottom bar to switch Ride, Ops, Driver, Play and Admin.</span></p>
+        <button type="button" class="link-btn" id="step6Back">← Not now</button>
+      </section>
+
+    </div>
+
+    <p class="auth-legal">Sibat Na demo · no real payments, no real identities, no SMS.</p>
+  </main>
+</div>
+
+<!-- =========================================================================
+     PASSENGER APP — ride dashboard (shown after login)
+     ========================================================================= -->
+<div id="appShell" class="app-shell" hidden>
+  <header class="app-header">
+    <a class="brand brand-compact" href="#" id="brandHome" aria-label="Sibat Na home">
+      <span class="brand-mark">
+        <img class="brand-logo" src="assets/brand/sibat-na-logo-256.png" alt="" width="34" height="34" />
+      </span>
+      <span class="brand-text">Sibat<span>Na</span></span>
+    </a>
+
+    <nav class="app-nav" aria-label="Main">
+      <button type="button" class="nav-pill is-active" data-nav="ride">Ride</button>
+      <button type="button" class="nav-pill" data-nav="ops">Operations</button>
+      <a class="nav-pill" href="assets/compiled/frontend-all.html" target="_blank" rel="noopener">Admin ↗</a>
+    </nav>
+
+    <div class="header-actions">
+      <span class="engine-pill" id="enginePill" title="C++ engine status"><i></i><span>engine</span></span>
+      <button type="button" class="icon-btn theme-btn" data-theme-toggle aria-label="Toggle map theme">☾</button>
+      <button type="button" class="user-chip" id="userChip" title="Account">
+        <span class="avatar" id="userInitials">SN</span>
+        <span class="user-meta"><strong id="userName">Passenger</strong><small id="userRole">passenger</small></span>
+      </button>
+      <button type="button" class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5v16h4M15 8l4 4-4 4M19 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="ride-layout">
+    <!-- ================= MAP ================= -->
+    <section class="map-shell" aria-label="Ride map">
+      <div id="passengerMap" class="map-canvas"></div>
+      <div class="center-pin" aria-hidden="true">
+        <span class="center-pin-head"></span>
+        <span class="center-pin-stem"></span>
+        <span class="center-pin-shadow"></span>
+      </div>
+      <div class="map-mode-badge" hidden></div>
+
+      <div class="map-toolbar">
+        <button type="button" class="map-btn" id="pinDestBtn" title="Set destination on map" aria-label="Set destination on map" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+        </button>
+        <button type="button" class="map-btn" id="locateBtn" title="Use my location" aria-label="Use my location">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </button>
+        <button type="button" class="map-btn" id="fitRouteBtn" title="Fit the route" aria-label="Fit route">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+        <button type="button" class="map-btn theme-btn" data-theme-toggle title="Day / night map" aria-label="Toggle map theme">☾</button>
+      </div>
+
+      <div class="map-legend">
+        <span><i class="dot dot-pickup"></i> pick up here</span>
+        <span><i class="dot dot-dest"></i> destination</span>
+        <span class="drag-note">drag the map to move the pin</span>
+      </div>
+
+      <div id="ridePopup" class="ride-popup" hidden>
+        <div class="ride-popup-head"><span class="pulse"></span><strong id="ridePopupTitle">Ride found</strong></div>
+        <p id="ridePopupCopy">A driver accepted your request.</p>
+        <div class="ride-popup-driver" id="ridePopupDriver" hidden>
+          <span class="avatar avatar-sm" id="ridePopupInitials">MR</span>
+          <div><strong id="ridePopupName">Mika Reyes</strong><small id="ridePopupVehicle">Toyota Vios · NCR 2841</small></div>
+          <span class="rating" id="ridePopupRating">4.9 ★</span>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm btn-block" id="ridePopupClose">Got it</button>
+      </div>
+    </section>
+
+    <!-- ================= SIDE PANEL ================= -->
+    <aside class="side-panel">
+      <div class="panel-scroll">
+
+        <section class="panel-head">
+          <p class="eyebrow" id="greetingTime">Good evening</p>
+          <h1 id="greeting">Kumusta, <span>Demo</span>!</h1>
+          <p class="panel-sub" data-text="brand.tagline">Share the road. Split the fare.</p>
+        </section>
+
+        <!-- Destination search (Photon autocomplete) -->
+        <section class="card search-card">
+          <div class="card-head">
+            <h2>Find a destination</h2>
+            <span class="chip chip-cyan">PHOTON</span>
+          </div>
+          <label class="field-label" for="destSearch" data-text="passenger.heroTitle">Where are we going?</label>
+          <div class="search-field">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+            <input id="destSearch" class="input" type="search" autocomplete="off"
+                   data-text-placeholder="passenger.searchPlaceholder"
+                   placeholder="Search a destination in the Philippines" />
+            <span class="search-spinner" id="searchSpinner" hidden></span>
+          </div>
+          <ul class="search-results" id="searchResults" hidden></ul>
+          <p class="hint-line">Tip: search “SM North”, “Makati CBD” or “NAIA 3”.</p>
+        </section>
+
+        <!-- Pickup + destination summary -->
+        <section class="card trip-card">
+          <div class="trip-point">
+            <span class="trip-bullet trip-bullet-pickup"></span>
+            <div class="trip-point-body">
+              <span class="trip-label">Pickup</span>
+              <strong id="pickupLabel">Locating…</strong>
+              <small id="pickupCoords">14.6564, 121.0306</small>
+            </div>
+            <button type="button" class="link-btn" id="editPickupBtn">Adjust</button>
+          </div>
+          <div class="trip-connector" aria-hidden="true"></div>
+          <div class="trip-point">
+            <span class="trip-bullet trip-bullet-dest"></span>
+            <div class="trip-point-body">
+              <span class="trip-label">Destination</span>
+              <strong id="destLabel">Not set yet</strong>
+              <small id="destDetail">Search above to set your destination</small>
+            </div>
+            <button type="button" class="link-btn" id="clearDestBtn" hidden>Clear</button>
+          </div>
+        </section>
+
+        <!-- Fare estimate + book button (only with a destination) -->
+        <section class="card book-card" id="bookingCard" hidden>
+          <div class="fare-row">
+            <div>
+              <span class="fare-label">Estimated shared fare</span>
+              <strong class="fare-value" id="fareEstimate">₱0.00</strong>
+            </div>
+            <div class="fare-meta">
+              <span id="tripDistance">0.0 km</span>
+              <span id="tripDuration">—</span>
+            </div>
+          </div>
+          <p class="fare-rule" id="fareRule">Base ₱15 · first 4 km · ₱2.50 per extra km</p>
+          <div class="seats-row">
+            <span>Seats</span>
+            <div class="stepper" role="group" aria-label="Seats">
+              <button type="button" id="seatsMinus" aria-label="Fewer seats">−</button>
+              <strong id="seatsValue">1</strong>
+              <button type="button" id="seatsPlus" aria-label="More seats">+</button>
+            </div>
+            <span class="route-source" id="routeSource">OSRM route</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-block" id="bookBtn" data-text="passenger.bookButton">Book this ride</button>
+          <p class="hint-line">You join the shared queue for this corridor. Position updates live.</p>
+        </section>
+
+        <!-- Active ride / queue card -->
+        <section class="card active-card" id="activeRideCard" hidden>
+          <div class="active-head">
+            <div>
+              <span class="eyebrow">Your shared ride</span>
+              <h2 id="activeCode">SBT-0000</h2>
+            </div>
+            <span class="status-pill" id="activeStatus">Queued</span>
+          </div>
+
+          <div class="queue-badge" id="queueBadge">
+            <span class="queue-number" id="queueNumber">1</span>
+            <div><strong>in the shared queue</strong><small id="queueCopy">Waiting for a driver match</small></div>
+          </div>
+
+          <div class="queue-lane" id="queueLane" hidden>
+            <span class="queue-lane-label">Your place in line</span>
+            <div class="queue-chips" id="queueChips"></div>
+          </div>
+
+          <ol class="trip-timeline" id="tripTimeline">
+            <li data-phase="pending"><i></i><span>Queued</span></li>
+            <li data-phase="offered"><i></i><span>Ride found</span></li>
+            <li data-phase="arriving"><i></i><span>Driver on the way</span></li>
+            <li data-phase="on_trip"><i></i><span>On the trip</span></li>
+            <li data-phase="completed"><i></i><span>Completed</span></li>
+          </ol>
+
+          <div class="driver-card" id="activeDriver" hidden>
+            <span class="avatar" id="activeDriverInitials">MR</span>
+            <div class="driver-card-body">
+              <strong id="activeDriverName">Mika Reyes</strong>
+              <small id="activeDriverVehicle">Toyota Vios · NCR 2841</small>
+            </div>
+            <span class="rating">4.9 ★</span>
+          </div>
+
+          <div class="trip-route" id="activeRoute">
+            <span class="trip-bullet trip-bullet-pickup"></span>
+            <div><strong id="activePickup">Pickup</strong><small id="activeDest">Destination</small></div>
+            <span class="fare-mini" id="activeFare">₱0.00</span>
+          </div>
+
+          <button type="button" class="btn btn-danger btn-block" id="cancelRideBtn">Cancel ride</button>
+          <p class="hint-line" id="activeHint">Keep this tab open — the queue updates every few seconds.</p>
+        </section>
+
+        <!-- Recent trips -->
+        <section class="card recent-card">
+          <div class="card-head"><h2>Recent trips</h2><span class="chip">HISTORY</span></div>
+          <ul class="recent-list" id="recentRides">
+            <li class="empty-row">No trips yet. Book one above.</li>
+          </ul>
+        </section>
+
+        <p class="panel-foot">
+          <span class="engine-pill" id="enginePillFoot"><i></i><span>engine</span></span>
+          Shared state: <code>sibatna.transport.v1</code>
+        </p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Phone/tablet navigation: the desktop nav is hidden below 1080px. -->
+  <nav class="mobile-tabs" aria-label="Mobile app navigation">
+    <button type="button" class="mobile-tab is-active" data-mobile-nav="ride">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"/><circle cx="12" cy="10" r="2.4"/></svg>
+      <span>Ride</span>
+    </button>
+    <button type="button" class="mobile-tab" data-mobile-nav="ops">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg>
+      <span>Ops</span>
+    </button>
+    <button type="button" class="mobile-tab" data-mobile-nav="driver">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.4"/><path d="M3.8 10.4h6.2M14 10.4h6.2M12 14.4V21"/></svg>
+      <span>Driver</span>
+    </button>
+    <button type="button" class="mobile-tab mobile-tab-play" data-run-open>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/></svg>
+      <span>Play</span>
+    </button>
+    <a class="mobile-tab" href="assets/compiled/frontend-all.html" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 3 7.8 7 9 4-1.2 7-4.4 7-9V6l-7-3Z"/><path d="m9 11 2 2 4-4"/></svg>
+      <span>Admin</span>
+    </a>
+  </nav>
+</div>
+
+<!-- =========================================================================
+     OPERATIONS CENTER — overview / locations / routes / queues / simulation
+     ========================================================================= -->
+<div id="opsScreen" class="screen-overlay" hidden>
+  <header class="overlay-header">
+    <div class="overlay-title">
+      <span class="chip chip-cyan">OPS</span>
+      <h2 data-text="ops.title">Operations Center</h2>
+      <p id="opsSubtitle">Live view of the C++ engine · edits are saved to <code>data/state.json</code></p>
+    </div>
+    <div class="overlay-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="opsRefresh">↻ Refresh</button>
+      <button type="button" class="icon-btn" id="opsClose" aria-label="Close operations">×</button>
+    </div>
+  </header>
+
+  <nav class="ops-tabs" aria-label="Operations sections">
+    <button type="button" class="ops-tab is-active" data-ops-tab="overview">Overview</button>
+    <button type="button" class="ops-tab" data-ops-tab="locations">Locations</button>
+    <button type="button" class="ops-tab" data-ops-tab="routes">Routes</button>
+    <button type="button" class="ops-tab" data-ops-tab="queues">Queues</button>
+    <button type="button" class="ops-tab" data-ops-tab="simulation">Simulation</button>
+    <button type="button" class="ops-tab" data-ops-tab="texts">UI text</button>
+  </nav>
+
+  <div class="ops-body">
+    <section class="ops-panel is-active" data-ops-panel="overview">
+      <div class="stat-grid" id="opsStats"></div>
+      <div class="ops-columns">
+        <div class="ops-block">
+          <div class="ops-block-head"><h3>Drivers</h3><span class="chip">LIVE</span></div>
+          <div class="table-wrap"><table class="data-table" id="opsDrivers"></table></div>
+        </div>
+        <div class="ops-block">
+          <div class="ops-block-head"><h3>Latest rides</h3><span class="chip">QUEUE</span></div>
+          <div class="table-wrap"><table class="data-table" id="opsRides"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ops-panel" data-ops-panel="locations">
+      <div class="ops-block">
+        <div class="ops-block-head">
+          <h3>Saved locations</h3>
+          <button type="button" class="btn btn-primary btn-sm" data-add-location>+ Add location</button>
+        </div>
+        <div class="table-wrap"><table class="data-table" id="opsLocations"></table></div>
+      </div>
+    </section>
+
+    <section class="ops-panel" data-ops-panel="routes">
+      <div class="ops-block">
+        <div class="ops-block-head">
+          <h3>Fare corridors</h3>
+          <button type="button" class="btn btn-primary btn-sm" data-add-route>+ Add route</button>
+        </div>
+        <div class="table-wrap"><table class="data-table" id="opsRoutes"></table></div>
+      </div>
+    </section>
+
+    <section class="ops-panel" data-ops-panel="queues">
+      <div class="ops-block">
+        <div class="ops-block-head">
+          <h3>Shared queue</h3>
+          <button type="button" class="btn btn-primary btn-sm" id="serveNextBtn">Serve next ride →</button>
+        </div>
+        <p class="ops-note">FIFO per corridor. “Serve next” offers the oldest waiting ride to the nearest online driver.</p>
+        <div class="table-wrap"><table class="data-table" id="opsQueue"></table></div>
+      </div>
+    </section>
+
+    <section class="ops-panel" data-ops-panel="simulation">
+      <div class="ops-block sim-block">
+        <div class="ops-block-head"><h3>Dispatch simulation</h3><span class="chip chip-gold">C++ CORE</span></div>
+        <p class="ops-note">Runs the same matching and completion rules as live rides, inside the engine.</p>
+        <div class="sim-controls">
+          <label class="field">
+            <span class="field-label">Ticks</span>
+            <input class="input" id="simSteps" type="number" min="1" max="200" value="8" />
+          </label>
+          <label class="check-row"><input type="checkbox" id="simSpawn" checked /> Inject demo demand</label>
+          <button type="button" class="btn btn-primary" id="simRunBtn">Run simulation</button>
+        </div>
+        <pre class="sim-log" id="simLog">Ready. Tick 0.</pre>
+        <div class="stat-grid stat-grid-sm" id="simStats"></div>
+      </div>
+    </section>
+
+    <section class="ops-panel" data-ops-panel="texts">
+      <div class="ops-block">
+        <div class="ops-block-head">
+          <h3>Editable interface text</h3>
+          <button type="button" class="btn btn-primary btn-sm" id="saveTextsBtn">Save UI text</button>
+        </div>
+        <p class="ops-note">These labels are stored by the engine and applied across the app via <code>data-text</code>.</p>
+        <div class="text-list" id="textList"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- =========================================================================
+     DRIVER MODE — Grab-style panel (Ctrl+Shift+2 or #driver)
+     Demo gate code: 2468
+     ========================================================================= -->
+<div id="driverMode" class="driver-shell" hidden>
+  <header class="driver-bar">
+    <div class="driver-bar-left">
+      <button type="button" class="icon-btn driver-back" id="driverBack" aria-label="Back to passenger app">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>
+      </button>
+      <span class="brand-mark brand-mark-sm">
+        <img class="brand-logo" src="assets/brand/sibat-na-logo-256.png" alt="" width="30" height="30" />
+      </span>
+      <div>
+        <p class="eyebrow">SIBAT NA · DRIVER</p>
+        <strong id="driverNameBar">Driver</strong>
+      </div>
+      <span class="chip chip-gold" id="driverStatusChip">OFFLINE</span>
+    </div>
+    <div class="driver-bar-right">
+      <div class="driver-earnings"><small>Today</small><strong id="driverEarningsBar">₱0.00</strong></div>
+      <label class="switch" title="Go online / offline">
+        <input type="checkbox" id="driverOnlineToggle" />
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+        <span class="switch-label" id="driverOnlineLabel">Go online</span>
+      </label>
+      <button type="button" class="icon-btn theme-btn" data-theme-toggle title="Day / night map" aria-label="Toggle map theme">☾</button>
+      <div class="driver-profile-wrap">
+        <button type="button" class="driver-profile-btn" id="driverProfileBtn"
+                aria-label="Driver profile and logout" aria-haspopup="menu" aria-expanded="false" aria-controls="driverProfileMenu">
+          <span class="driver-avatar" id="driverAvatar">DR</span>
+          <span class="driver-profile-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="driver-profile-menu" id="driverProfileMenu" role="menu" hidden>
+          <div class="driver-profile-head">
+            <span class="driver-avatar driver-avatar-lg" id="driverAvatarLg">DR</span>
+            <div>
+              <strong id="driverProfileName">Driver</strong>
+              <small id="driverProfileMeta">Demo driver</small>
+            </div>
+          </div>
+          <dl class="driver-profile-stats">
+            <div><dt>Rating</dt><dd id="driverProfileRating">4.70 ★</dd></div>
+            <div><dt>Trips</dt><dd id="driverProfileTrips">0</dd></div>
+            <div><dt>Earnings</dt><dd id="driverProfileEarnings">₱0.00</dd></div>
+          </dl>
+          <button type="button" class="driver-logout-btn" id="driverLogoutBtn" role="menuitem">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+            Log out
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="driver-layout">
+    <section class="driver-map-wrap">
+      <div id="driverMap" class="map-canvas"></div>
+      <div class="driver-map-badge" id="driverMapBadge">PICKUP PIN</div>
+      <div class="driver-map-tools">
+        <button type="button" class="map-btn" id="driverLocate" title="Use my location" aria-label="Use my location">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </button>
+        <button type="button" class="map-btn" id="driverFitRoute" title="Fit the active route" aria-label="Fit the active route">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+        <button type="button" class="map-btn theme-btn" data-theme-toggle title="Day / night map" aria-label="Toggle map theme">☾</button>
+      </div>
+      <div class="driver-map-legend">
+        <span><i class="dot dot-pickup"></i> pickup</span>
+        <span><i class="dot dot-dest"></i> destination</span>
+      </div>
+    </section>
+
+    <aside class="driver-panel">
+      <div class="driver-panel-scroll">
+
+        <!-- Idle / scanner -->
+        <section class="driver-card-block" id="driverIdle">
+          <p class="eyebrow">Dispatch</p>
+          <h2>Ready when you are</h2>
+          <p class="driver-copy">Go online and the engine will match you with the oldest passenger in the shared queue.</p>
+          <div class="scanner" id="driverScanner">
+            <span class="scanner-ring"></span><span class="scanner-ring"></span><span class="scanner-ring"></span>
+            <span class="scanner-core">◉</span>
+          </div>
+          <p class="scanner-label" id="scannerLabel">You are offline</p>
+          <button type="button" class="btn btn-primary btn-block" id="driverGoOnline">Go online</button>
+          <p class="hint-line">3-second search · matches are random, so sometimes no passenger is nearby.</p>
+        </section>
+
+        <!-- Matching animation -->
+        <section class="driver-card-block" id="driverMatching" hidden>
+          <p class="eyebrow">Dispatch</p>
+          <h2>Finding a passenger…</h2>
+          <div class="match-radar">
+            <span></span><span></span><span></span>
+            <strong id="matchCountdown">3</strong>
+          </div>
+          <p class="driver-copy center">Scanning the shared queue for <strong id="matchCorridor">any corridor</strong>.</p>
+          <button type="button" class="btn btn-ghost btn-block" id="cancelMatchBtn">Cancel</button>
+        </section>
+
+        <!-- Offer card -->
+        <section class="driver-card-block offer-block" id="driverOffer" hidden>
+          <div class="offer-head">
+            <p class="eyebrow">New ride offer</p>
+            <span class="offer-timer" id="offerTimer">15s</span>
+          </div>
+          <h2 id="offerName">Passenger</h2>
+          <p class="driver-copy" id="offerCode">SBT-0000 · 1 seat</p>
+
+          <div class="offer-route">
+            <div class="offer-point"><i class="dot dot-pickup"></i><div><small>PICKUP</small><strong id="offerPickup">—</strong></div></div>
+            <div class="offer-line"></div>
+            <div class="offer-point"><i class="dot dot-dest"></i><div><small>DROP-OFF</small><strong id="offerDest">—</strong></div></div>
+          </div>
+
+          <div class="offer-meta">
+            <div><small>Distance</small><strong id="offerKm">0 km</strong></div>
+            <div><small>Fare</small><strong id="offerFare">₱0.00</strong></div>
+            <div><small>Your 80%</small><strong id="offerShare">₱0.00</strong></div>
+          </div>
+
+          <div class="offer-actions">
+            <button type="button" class="btn btn-ghost" id="rejectRideBtn">Reject</button>
+            <button type="button" class="btn btn-primary" id="acceptRideBtn">Accept ride</button>
+          </div>
+        </section>
+
+        <!-- Active trip phases -->
+        <section class="driver-card-block" id="driverTrip" hidden>
+          <div class="offer-head">
+            <p class="eyebrow">Active trip</p>
+            <span class="status-pill" id="tripPhasePill">ARRIVING</span>
+          </div>
+          <h2 id="tripPassenger">Passenger</h2>
+          <p class="driver-copy" id="tripCode">SBT-0000</p>
+
+          <div class="phase-track" id="phaseTrack">
+            <span data-phase="arriving">Pickup</span>
+            <span data-phase="at_pickup">At pickup</span>
+            <span data-phase="on_trip">On trip</span>
+            <span data-phase="completed">Done</span>
+          </div>
+
+          <div class="offer-route compact">
+            <div class="offer-point"><i class="dot dot-pickup"></i><div><small>PICKUP</small><strong id="tripPickup">—</strong></div></div>
+            <div class="offer-line"></div>
+            <div class="offer-point"><i class="dot dot-dest"></i><div><small>DROP-OFF</small><strong id="tripDest">—</strong></div></div>
+          </div>
+
+          <div class="offer-meta">
+            <div><small>Fare</small><strong id="tripFare">₱0.00</strong></div>
+            <div><small>Distance</small><strong id="tripKm">0 km</strong></div>
+            <div><small>Status</small><strong id="tripEta">—</strong></div>
+          </div>
+
+          <button type="button" class="btn btn-primary btn-block" id="phaseBtn">I’ve arrived at pickup</button>
+          <div class="trip-actions-row">
+            <button type="button" class="btn btn-ghost btn-sm" id="navigateBtn">Open in Maps ↗</button>
+            <button type="button" class="btn btn-danger btn-sm" id="abandonTripBtn">Cancel trip</button>
+          </div>
+        </section>
+
+        <!-- Earnings + log -->
+        <section class="driver-card-block" id="driverEarnings">
+          <div class="card-head"><h2>Earnings</h2><span class="chip chip-gold">80% SHARE</span></div>
+          <div class="earn-grid">
+            <div><small>Today</small><strong id="earnToday">₱0.00</strong></div>
+            <div><small>Trips</small><strong id="earnTrips">0</strong></div>
+            <div><small>Rating</small><strong id="earnRating">4.90 ★</strong></div>
+          </div>
+          <ul class="trip-log" id="driverTripLog">
+            <li class="empty-row">No completed trips yet.</li>
+          </ul>
+        </section>
+
+        <p class="panel-foot">Demo gate code <code>2468</code> · data shared with the passenger app.</p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<!-- =========================================================================
+     DRIVER GATE — demo access code 2468
+     ========================================================================= -->
+<div id="driverGate" class="gate-backdrop" hidden>
+  <form class="gate-card" id="driverGateForm">
+    <span class="gate-lock">⚿</span>
+    <p class="eyebrow">Driver access</p>
+    <h2>Enter the demo gate code</h2>
+    <p class="gate-copy">This keeps passengers out of the driver panel in the demo.</p>
+    <input class="input gate-input" id="driverGateCode" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off" />
+    <p class="field-error" id="gateError" role="alert"></p>
+    <p class="demo-hint"><span>DEMO</span> Gate code is <strong>2468</strong>.</p>
+    <div class="gate-actions">
+      <button type="button" class="btn btn-ghost" id="gateCancel">Cancel</button>
+      <button type="submit" class="btn btn-primary">Unlock</button>
+    </div>
+  </form>
+</div>
+
+<!-- =========================================================================
+     SIBAT RUN — offline neon big-bike mini-game (Ctrl+Shift+G)
+     Pure DOM + SVG. No network, no external assets, works from file://.
+     ========================================================================= -->
+<div id="sibatRun" class="sibat-run" role="dialog" aria-modal="true" aria-labelledby="runTitle" hidden>
+  <div class="sibat-run-frame">
+    <header class="sibat-run-head">
+      <div class="sibat-run-brand">
+        <img src="assets/brand/sibat-na-logo-256.png" alt="" width="42" height="42" />
+        <div>
+          <strong id="runTitle">SIBAT RUN</strong>
+          <span>Neon big-bike sprint</span>
+        </div>
+      </div>
+      <div class="sibat-run-score" aria-live="off">
+        <div><span>Score</span><strong id="runScore">0000</strong></div>
+        <div><span>Best</span><strong id="runBest">0000</strong></div>
+      </div>
+      <button type="button" class="sibat-run-close" id="runClose" aria-label="Close the bike game">✕</button>
+    </header>
+
+    <div class="sibat-run-stage" id="runStage">
+      <svg class="run-skyline" viewBox="0 0 1200 240" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 240v-70h55v-45h30v45h25V90h55v80h35v-35h60v35h30V95h65v75h25v-50h55v50h40V60h55v110h30v-35h50v35h35v-70h60v70h30v-45h50v45h40V85h60v85h30v-30h55v30h35v-60h60v60h30v-40h55v40h35V70h60v100h30v-50h50v50h40v-30h60v30h30v-75h55v75h25v-40h55v40Z" fill="currentColor" />
+        <path d="M0 240v-38h38v-22h28v22h30v-34h44v34h26v-18h38v18h30v-30h48v30h26v-16h36v16h32v-42h50v42h26v-24h40v24h30v-14h36v14h34v-28h48v28h26v-18h38v18h32v-34h46v34h26v-20h38v20h30v-12h40v12h34v-26h48v26h26v-16h38v16h32v-38h50v38h26v-20h40v20h30v-14h36v14h30v-30h48v30h26v-18h38v18h32v-38h48v38h26v-20h40v20Z" fill="currentColor" opacity=".55" />
+      </svg>
+      <div class="run-grid" aria-hidden="true"></div>
+      <div class="run-road" aria-hidden="true"><span></span></div>
+      <div class="run-obstacles" id="runObstacles" aria-hidden="true"></div>
+      <div class="run-bike" id="runBike" aria-hidden="true">
+        <span class="run-bike-shadow"></span>
+        <svg class="bike-svg" viewBox="0 0 200 110"><use href="#sibatBike"></use></svg>
+      </div>
+
+      <div class="run-panel" id="runIntro">
+        <p class="run-kicker">Offline mini game</p>
+        <h2>Jump the neon barriers</h2>
+        <p>Press <kbd>Space</kbd> / <kbd>↑</kbd> — or tap the lane — to hop. The longer you ride, the faster it gets.</p>
+        <button type="button" class="btn btn-primary" id="runStart">Start riding</button>
+      </div>
+
+      <div class="run-panel run-panel-over" id="runOver" hidden>
+        <p class="run-kicker">Wipeout</p>
+        <h2>Run over</h2>
+        <p>Score <strong id="runFinal">0</strong> · Best <strong id="runFinalBest">0</strong></p>
+        <button type="button" class="btn btn-primary" id="runAgain">Ride again</button>
+      </div>
+
+      <div class="run-hint" id="runHint" hidden>
+        <span><kbd>Space</kbd> / <kbd>↑</kbd> jump</span>
+        <span><kbd>Esc</kbd> exit</span>
+      </div>
+    </div>
+
+    <footer class="sibat-run-foot">
+      <span><i></i> Runs offline · no connection needed</span>
+      <span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd> toggle</span>
+    </footer>
+  </div>
+</div>
+
+<!-- Toast host + shared scripts -->
+<div id="toastHost" class="toast-host" aria-live="polite"></div>
+<script src="frontend/shared.js"></script>
+<script src="frontend/local-engine.js"></script>
+<script src="frontend/app.js"></script>
+<script src="frontend/driver.js"></script>
+<script src="frontend/bike-game.js"></script>
+</body>
+</html>
